@@ -1,0 +1,113 @@
+.app {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+.cabecalho {
+  margin-bottom: 2.5rem;
+}
+
+.cabecalho h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.subtitulo {
+  margin: 0.35rem 0 0;
+  color: var(--cor-texto-fraco);
+}
+
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.cartao h2 {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cor-texto-fraco);
+}
+
+.status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* A bolinha de status. Cor definida por cada estado abaixo. */
+.status::before {
+  content: '';
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status.carregando {
+  color: var(--cor-texto-fraco);
+}
+
+.status.ok {
+  color: var(--cor-ok);
+}
+
+.status.erro {
+  color: var(--cor-erro);
+  display: block;
+}
+
+.status.erro::before {
+  display: inline-block;
+  margin-right: 0.6rem;
+}
+
+.status.erro p {
+  margin: 0 0 0.5rem;
+}
+
+.detalhe {
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.dica {
+  color: var(--cor-texto-fraco);
+  font-size: 0.9rem;
+}
+
+.dica code {
+  display: block;
+  margin-top: 0.4rem;
+}
+
+code {
+  font-family: var(--fonte-mono);
+  font-size: 0.85em;
+  background: var(--cor-codigo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 5px;
+  padding: 0.15em 0.4em;
+}
+
+.passos {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.9;
+  color: var(--cor-texto-fraco);
+}
+
+.passos .feito {
+  color: var(--cor-ok);
+}

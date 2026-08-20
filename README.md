@@ -177,13 +177,24 @@ go run ./cmd/servidor
 
 Confira: `curl http://localhost:8080/api/saude`
 
-### 4. Frontend (a partir da Fase 3)
+### 4. Frontend
+
+Em **outro terminal** (o backend precisa continuar rodando):
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+Abra `http://localhost:5173`. A tela mostra se o backend respondeu.
+
+O Vite roda na 5173 e o Go na 8080 — origens diferentes, o que normalmente daria
+erro de CORS. O proxy configurado em `vite.config.ts` repassa tudo que começa com
+`/api` para o Go, então o navegador enxerga uma origem só. Em produção o binário Go
+serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa de existir.
+
+**É por isso que não há middleware de CORS no backend** — e não deve haver.
 
 ---
 

@@ -1,0 +1,49 @@
+/*
+ * Tokens de cor em variáveis CSS: definidos uma vez, usados em todo lugar.
+ * O bloco prefers-color-scheme troca só os valores — nenhuma regra de layout
+ * precisa ser duplicada para o tema claro.
+ */
+:root {
+  --cor-fundo: #0f1115;
+  --cor-superficie: #171a21;
+  --cor-borda: #262b36;
+  --cor-codigo: #1e222b;
+  --cor-texto: #e6e8ee;
+  --cor-texto-fraco: #99a0b0;
+  --cor-ok: #4ade80;
+  --cor-erro: #f87171;
+
+  --fonte-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --cor-fundo: #f7f8fa;
+    --cor-superficie: #ffffff;
+    --cor-borda: #e3e6ec;
+    --cor-codigo: #f0f2f5;
+    --cor-texto: #1a1d24;
+    --cor-texto-fraco: #616a7d;
+    --cor-ok: #15803d;
+    --cor-erro: #dc2626;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
