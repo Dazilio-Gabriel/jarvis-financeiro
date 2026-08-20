@@ -147,6 +147,16 @@ Schema completo em [`backend/migrations/`](backend/migrations/). Resumo:
 
 ### 1. Banco
 
+O instalador MSI do MySQL só copia os binários. Para criar o data dir, registrar o
+serviço do Windows e definir a senha do root, rode UMA VEZ num PowerShell **como
+administrador**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup-mysql.ps1
+```
+
+Depois, crie o banco e as tabelas:
+
 ```bash
 mysql -u root -p < backend/migrations/001_inicial.sql
 ```
