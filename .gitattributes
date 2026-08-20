@@ -1,0 +1,17 @@
+# O gofmt considera CRLF como "não formatado". No Windows, o git converte LF para
+# CRLF no checkout por padrão, e aí `gofmt -l` acusa arquivo que está correto.
+# Fixar eol=lf nos fontes resolve na raiz.
+
+* text=auto eol=lf
+
+*.go      text eol=lf
+*.sql     text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.ts      text eol=lf
+*.tsx     text eol=lf
+
+# Scripts do Windows precisam de CRLF
+*.ps1     text eol=crlf
+*.bat     text eol=crlf
+*.cmd     text eol=crlf

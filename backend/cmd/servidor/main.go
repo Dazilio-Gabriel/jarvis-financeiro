@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"jarvis-financeiro/internal/web"
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/web"
 )
 
 func main() {
