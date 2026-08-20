@@ -1,0 +1,34 @@
+# Segredos — NUNCA comitar
+.env
+.env.local
+*.pem
+*.key
+
+# Dados financeiros reais
+/dados/
+*.csv
+!exemplo*.csv
+*.sql.gz
+*.dump
+
+# Go
+/backend/servidor
+/backend/servidor.exe
+*.exe
+*.test
+/backend/vendor/
+
+# Frontend
+node_modules/
+/frontend/dist/
+/backend/internal/web/dist/
+.vite/
+
+# Editor / SO
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Claude Code — settings.local.json é pessoal
+.claude/settings.local.json
