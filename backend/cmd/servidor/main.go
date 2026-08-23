@@ -1,46 +1,61 @@
-// O ponto de entrada do servidor.
-//
-// Em Go, um executável é sempre um pacote chamado "main" com uma "func main()".
-// Todo o resto do projeto vive em internal/ e é biblioteca.
-//
-// A responsabilidade deste arquivo é só uma: montar as dependências e subir o servidor.
-// Nenhuma regra de negócio aqui.
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
-	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/config"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/web"
 )
 
 func main() {
-	// os.Getenv devolve string vazia quando a variável não existe — não dá erro.
-	// A partir da Fase 1 carregamos o .env; por enquanto exportar na mão já serve.
-	porta := os.Getenv("PORTA")
-	if porta == "" {
-		porta = "8080"
+	loConf := config.Carregar(".env")
+
+	if loConf.DSN == "" {
+		log.Fatal("MYSQL_DSN nao configurado — copie .env.example para .env")
 	}
 
-	// http.Server em vez de http.ListenAndServe direto: só assim dá pra configurar
-	// timeouts. Sem ReadHeaderTimeout, uma conexão lenta segura um handler para sempre
-	// (é um vetor de DoS conhecido, e o default do Go é "sem limite").
-	servidor := &http.Server{
-		Addr:              ":" + porta,
-		Handler:           web.Rotas(),
-		ReadHeaderTimeout: 5 * time.Second,
+	// NotifyContext cancela o ctx no Ctrl+C, e e isso que dispara o shutdown limpo
+	ctx, cancelar := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancelar()
+
+	ctxConn, cancelarConn := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelarConn()
+
+	loRepo, err := armazenamento.Abrir(ctxConn, loConf.DSN)
+	if err != nil {
+		log.Fatalf("banco: %v", err)
+	}
+	defer loRepo.Fechar()
+
+	loServ := &http.Server{
+		Addr:              ":" + loConf.Porta,
+		Handler:           web.NovoServidor(loRepo, loConf.APIToken).Rotas(),
+		ReadHeaderTimeout: 5 * time.Second, // sem isso conexao lenta segura o handler pra sempre
 	}
 
-	log.Printf("servidor ouvindo em http://localhost:%s", porta)
+	// sobe numa goroutine para o main continuar e conseguir esperar o sinal de parada
+	go func() {
+		log.Printf("servidor ouvindo em http://localhost:%s", loConf.Porta)
+		if err := loServ.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("servidor parou: %v", err)
+		}
+	}()
 
-	// ListenAndServe bloqueia até o servidor morrer, e SEMPRE devolve um erro.
-	//
-	// Repare no padrão: em Go, erro é um valor de retorno comum, não uma exceção.
-	// Não existe try/catch. É o "if err != nil" que você vai escrever mil vezes —
-	// verboso de propósito, para que nenhum erro passe despercebido.
-	if err := servidor.ListenAndServe(); err != nil {
-		log.Fatalf("servidor parou: %v", err)
+	<-ctx.Done()
+	log.Println("encerrando...")
+
+	// Shutdown espera as requisicoes em andamento terminarem, ate o limite abaixo
+	ctxParar, cancelarParar := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelarParar()
+
+	if err := loServ.Shutdown(ctxParar); err != nil {
+		log.Printf("shutdown forcado: %v", err)
 	}
 }
