@@ -1,108 +1,131 @@
 import { useEffect, useState } from 'react'
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { buscarSaude } from './api'
+import Dashboard from './paginas/Dashboard'
+import Transacoes from './paginas/Transacoes'
+import Importar from './paginas/Importar'
+import Categorias from './paginas/Categorias'
 import './App.css'
 
-/**
- * Estado da conexão com o backend.
- *
- * Isto é uma "união discriminada": o tipo só permite um destes quatro valores.
- * Se você escrever `setConexao('carregado')` (que não existe), o TypeScript
- * reclama antes de rodar. É a vantagem concreta do TS sobre o JS puro aqui —
- * em JS, esse erro de digitação só apareceria como uma tela em branco.
- */
-type Conexao =
-  | { estado: 'carregando' }
-  | { estado: 'ok'; status: string }
-  | { estado: 'erro'; mensagem: string }
+type Conexao = 'carregando' | 'ok' | 'erro'
+
+const MENU = [
+  { rota: '/dashboard', icone: '◈', nome: 'Dashboard', desc: 'visão do mês' },
+  { rota: '/transacoes', icone: '≡', nome: 'Transações', desc: 'todos os lançamentos' },
+  { rota: '/importar', icone: '↧', nome: 'Importar', desc: 'CSV do banco' },
+  { rota: '/categorias', icone: '◐', nome: 'Categorias', desc: 'orçamento e regras' },
+]
 
 export default function App() {
-  const [conexao, setConexao] = useState<Conexao>({ estado: 'carregando' })
+  const [conexao, setConexao] = useState<Conexao>('carregando')
+  const [banco, setBanco] = useState('')
+  const [menuAberto, setMenuAberto] = useState(false)
+  const local = useLocation()
 
-  // useEffect roda DEPOIS que o componente aparece na tela.
-  // O array vazio [] no final significa "roda uma vez só, na montagem".
   useEffect(() => {
-    // AbortController cancela a requisição se o componente sair da tela antes
-    // da resposta chegar.
-    //
-    // Não é firula: em modo de desenvolvimento o React monta, desmonta e remonta
-    // cada componente de propósito, justamente para expor efeitos que não limpam
-    // o que criaram. Sem isto, você veria a chamada acontecer duas vezes.
     const controle = new AbortController()
-
-    buscarSaude(controle.signal)
-      .then((s) => setConexao({ estado: 'ok', status: s.status }))
-      .catch((e: unknown) => {
-        // Abortar é o comportamento esperado, não um erro para mostrar ao usuário.
-        if (e instanceof DOMException && e.name === 'AbortError') return
-        setConexao({
-          estado: 'erro',
-          mensagem: e instanceof Error ? e.message : 'erro desconhecido',
+    const checar = () =>
+      buscarSaude(controle.signal)
+        .then((s) => {
+          setConexao('ok')
+          setBanco(s.banco)
         })
-      })
+        .catch((e: unknown) => {
+          if (e instanceof DOMException && e.name === 'AbortError') return
+          setConexao('erro')
+        })
 
-    // A função retornada é a "limpeza": o React a chama ao desmontar.
-    return () => controle.abort()
+    checar()
+    const timer = setInterval(checar, 30_000)
+    return () => {
+      controle.abort()
+      clearInterval(timer)
+    }
   }, [])
 
   return (
-    <div className="app">
-      <header className="cabecalho">
-        <h1>Jarvis Financeiro</h1>
-        <p className="subtitulo">Assistente financeiro pessoal e familiar</p>
-      </header>
+    <div className="layout">
+      <aside className={menuAberto ? 'menu aberto' : 'menu'}>
+        <div className="marca">
+          <span className="marca-icone">◆</span>
+          <div className="marca-texto">
+            <span className="marca-nome">JARVIS</span>
+            <span className="marca-sub">FINANCEIRO</span>
+          </div>
+        </div>
 
-      <main>
-        <section className="cartao">
-          <h2>Conexão com o backend</h2>
-          <StatusBackend conexao={conexao} />
-        </section>
+        <nav className="nav">
+          {MENU.map((item, i) => (
+            <NavLink
+              key={item.rota}
+              to={item.rota}
+              className={({ isActive }) => (isActive ? 'nav-item ativo' : 'nav-item')}
+              style={{ '--i': i } as React.CSSProperties}
+              onClick={() => setMenuAberto(false)}
+            >
+              <span className="nav-icone">{item.icone}</span>
+              <span className="nav-texto">
+                <strong>{item.nome}</strong>
+                <em>{item.desc}</em>
+              </span>
+              <span className="nav-marca" />
+            </NavLink>
+          ))}
+        </nav>
 
-        <section className="cartao">
-          <h2>Próximos passos</h2>
-          <ol className="passos">
-            <li className="feito">Fase 0 — servidor Go de pé</li>
-            <li className="feito">Frontend conversando com o Go</li>
-            <li>Fase 1 — domínio e MySQL</li>
-            <li>Fase 2 — importador de CSV do Nubank</li>
-            <li>Fase 3 — lista de transações nesta tela</li>
-          </ol>
-        </section>
+        <div className="menu-rodape">
+          <div className={`status ${conexao}`}>
+            <span className="dot pulsa" />
+            <span>
+              {conexao === 'carregando' && 'verificando'}
+              {conexao === 'ok' && 'backend online'}
+              {conexao === 'erro' && 'backend offline'}
+            </span>
+          </div>
+          {conexao === 'ok' && banco !== 'ok' && (
+            <div className="status erro">
+              <span className="dot" />
+              <span>banco: {banco}</span>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <button
+        className="menu-botao"
+        onClick={() => setMenuAberto((a) => !a)}
+        aria-label="menu"
+      >
+        {menuAberto ? '✕' : '☰'}
+      </button>
+
+      {menuAberto && <div className="menu-fundo" onClick={() => setMenuAberto(false)} />}
+
+      <main className="conteudo">
+        {/* a key troca a cada rota, o que remonta o filho e redispara a animacao de entrada */}
+        <div className="pagina" key={local.pathname}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/transacoes" element={<Transacoes />} />
+            <Route path="/importar" element={<Importar />} />
+            <Route path="/categorias" element={<Categorias />} />
+            <Route path="*" element={<NaoEncontrado />} />
+          </Routes>
+        </div>
       </main>
     </div>
   )
 }
 
-/**
- * Componente que renderiza cada estado da conexão.
- *
- * Como `Conexao` é uma união discriminada, o TypeScript sabe que dentro do
- * `case 'ok'` existe o campo `status`, e que ele NÃO existe no `case 'erro'`.
- * Se você adicionar um quinto estado ao tipo e esquecer de tratar aqui, o
- * compilador acusa no `default`.
- */
-function StatusBackend({ conexao }: { conexao: Conexao }) {
-  switch (conexao.estado) {
-    case 'carregando':
-      return <p className="status carregando">Verificando…</p>
-
-    case 'ok':
-      return (
-        <p className="status ok">
-          Conectado — <code>/api/saude</code> respondeu{' '}
-          <strong>{conexao.status}</strong>
-        </p>
-      )
-
-    case 'erro':
-      return (
-        <div className="status erro">
-          <p>Sem conexão com o backend.</p>
-          <p className="detalhe">{conexao.mensagem}</p>
-          <p className="dica">
-            O servidor Go está rodando? Em outro terminal:
-            <code>cd backend &amp;&amp; go run ./cmd/servidor</code>
-          </p>
-        </div>
-      )
-  }
+function NaoEncontrado() {
+  return (
+    <div className="vazio">
+      <span className="vazio-icone">◇</span>
+      <h2>Página não encontrada</h2>
+      <NavLink to="/dashboard" className="botao">
+        voltar ao dashboard
+      </NavLink>
+    </div>
+  )
 }

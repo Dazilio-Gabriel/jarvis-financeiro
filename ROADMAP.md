@@ -9,6 +9,25 @@ por trás estiverem certos.
 
 ---
 
+## Onde estamos
+
+| Fase | Entrega | Status |
+|---|---|---|
+| **0** | Servidor Go de pé, rota de saúde | ✅ pronto |
+| **1** | Domínio + MySQL | ✅ pronto |
+| **2** | Importador de CSV com deduplicação | ✅ pronto |
+| **3** | API REST + telas | ✅ pronto |
+| **4** | Chat com a Claude API via tool use | ⬜ próxima |
+| **5** | Painel e orçamento refinados | 🟨 parcial — orçamento e gráfico já existem |
+| **6** | `go:embed` + PWA | ⬜ |
+| **7** | Deploy, autenticação, Open Finance | ⬜ |
+| **8** | WhatsApp | ⬜ |
+
+**Fora do roadmap original, já feito:** superfície `/api/integracao/*` protegida por token,
+pronta para o n8n — ver [INTEGRACAO.md](INTEGRACAO.md).
+
+---
+
 ## Como usar este roadmap
 
 Cada fase tem três partes:

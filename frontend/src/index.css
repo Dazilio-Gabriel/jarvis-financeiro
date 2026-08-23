@@ -1,34 +1,27 @@
-/*
- * Tokens de cor em variáveis CSS: definidos uma vez, usados em todo lugar.
- * O bloco prefers-color-scheme troca só os valores — nenhuma regra de layout
- * precisa ser duplicada para o tema claro.
- */
 :root {
-  --cor-fundo: #0f1115;
-  --cor-superficie: #171a21;
-  --cor-borda: #262b36;
-  --cor-codigo: #1e222b;
-  --cor-texto: #e6e8ee;
-  --cor-texto-fraco: #99a0b0;
-  --cor-ok: #4ade80;
-  --cor-erro: #f87171;
+  --fundo: #070b09;
+  --sup: #0e1411;
+  --sup-verde: #0f1a13;
+  --sup-amarelo: #17150c;
 
-  --fonte-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  --borda: #1c2822;
+  --verde-borda: #1f4d33;
+  --vermelho-borda: #4d2027;
+  --amarelo-borda: #4d4020;
 
-  color-scheme: dark light;
-}
+  --txt: #e4ece7;
+  --txt-fraco: #6f8279;
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --cor-fundo: #f7f8fa;
-    --cor-superficie: #ffffff;
-    --cor-borda: #e3e6ec;
-    --cor-codigo: #f0f2f5;
-    --cor-texto: #1a1d24;
-    --cor-texto-fraco: #616a7d;
-    --cor-ok: #15803d;
-    --cor-erro: #dc2626;
-  }
+  --verde: #38e07b;
+  --verde-glow: #38e07b66;
+  --vermelho: #e0566a;
+  --amarelo: #e0be3a;
+
+  --barra-fundo: #182420;
+
+  --mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+
+  color-scheme: dark;
 }
 
 * {
@@ -37,8 +30,8 @@
 
 body {
   margin: 0;
-  background: var(--cor-fundo);
-  color: var(--cor-texto);
+  background: var(--fundo);
+  color: var(--txt);
   font-family:
     system-ui,
     -apple-system,
@@ -46,4 +39,13 @@ body {
     sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+
+  /* brilho verde difuso no topo, como na referencia */
+  background-image: radial-gradient(
+    ellipse 90% 55% at 50% -20%,
+    #103b2333 0%,
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
