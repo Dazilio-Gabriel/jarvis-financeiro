@@ -1,29 +1,14 @@
--- Jarvis Financeiro — schema inicial (MySQL 8.4)
+-- Jarvis Financeiro - schema inicial (MySQL 8.4)
+-- Rodar: mysql -u root -p --port=3307 jarvis < backend/migrations/001_inicial.sql
 --
--- Rodar:  mysql -u root -p < backend/migrations/001_inicial.sql
---
--- REGRA NÚMERO UM: dinheiro em centavos, num inteiro. Nunca FLOAT, nunca DOUBLE.
--- Ponto flutuante não representa 0,10 exatamente, e o erro se acumula na soma.
--- Se algum dia precisar de fração, use DECIMAL — mas centavos em BIGINT resolve.
-
-CREATE DATABASE IF NOT EXISTS jarvis
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_0900_ai_ci;
-
-USE jarvis;
-
--- Usuário da aplicação. Nunca conecte a aplicação como root.
--- Troque a senha aqui E no .env (variável MYSQL_DSN).
-CREATE USER IF NOT EXISTS 'jarvis'@'localhost' IDENTIFIED BY 'TROQUE_ESTA_SENHA';
-GRANT SELECT, INSERT, UPDATE, DELETE ON jarvis.* TO 'jarvis'@'localhost';
-FLUSH PRIVILEGES;
-
+-- Dinheiro em centavos, num BIGINT. Nunca FLOAT: ponto flutuante nao representa
+-- 0,10 exatamente e o erro se acumula na soma.
 
 CREATE TABLE IF NOT EXISTS categorias (
     id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     nome               VARCHAR(80)     NOT NULL,
-    orcamento_centavos BIGINT          NULL,       -- meta mensal, opcional
-    cor                CHAR(7)         NULL,       -- '#RRGGBB'
+    orcamento_centavos BIGINT          NULL,
+    cor                CHAR(7)         NULL,
     criado_em          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
@@ -35,20 +20,19 @@ CREATE TABLE IF NOT EXISTS transacoes (
     id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     data           DATE            NOT NULL,
     descricao      VARCHAR(255)    NOT NULL,
-    valor_centavos BIGINT          NOT NULL,   -- em centavos, sempre
+    valor_centavos BIGINT          NOT NULL,
     tipo           ENUM('debito','credito') NOT NULL,
-    categoria_id   BIGINT UNSIGNED NULL,       -- NULL = ainda não categorizada
-    conta          VARCHAR(80)     NULL,       -- 'Nubank Cartão', 'Nubank Conta'
-    pessoa         VARCHAR(80)     NULL,       -- quem da família
-    fonte          VARCHAR(20)     NOT NULL,   -- 'csv' | 'pluggy' | 'manual'
-    hash_externo   CHAR(64)        NOT NULL,   -- sha256 de data+descricao+valor
+    categoria_id   BIGINT UNSIGNED NULL,
+    conta          VARCHAR(80)     NULL,
+    pessoa         VARCHAR(80)     NULL,
+    fonte          VARCHAR(20)     NOT NULL,
+    hash_externo   CHAR(64)        NOT NULL,
     criado_em      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
 
-    -- A deduplicação inteira depende deste índice único.
-    -- Reimportar o mesmo CSV vira um INSERT ... ON DUPLICATE KEY UPDATE
-    -- (ou INSERT IGNORE) em vez de linha duplicada.
+    -- a deduplicacao inteira depende deste unique: reimportar o mesmo CSV
+    -- vira INSERT IGNORE em vez de linha duplicada
     UNIQUE KEY uk_transacoes_hash (hash_externo),
 
     KEY idx_transacoes_data (data),
@@ -60,11 +44,10 @@ CREATE TABLE IF NOT EXISTS transacoes (
 ) ENGINE=InnoDB;
 
 
--- Categorização automática: se a descrição casar com o padrão, aplica a categoria.
--- 'prioridade' desempata quando mais de uma regra casa (maior vence).
+-- categorizacao automatica: descricao casando com o padrao recebe a categoria
 CREATE TABLE IF NOT EXISTS regras_categoria (
     id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    padrao       VARCHAR(120)    NOT NULL,   -- 'IFOOD', 'POSTO%'
+    padrao       VARCHAR(120)    NOT NULL,
     categoria_id BIGINT UNSIGNED NOT NULL,
     prioridade   INT             NOT NULL DEFAULT 0,
 
@@ -77,7 +60,7 @@ CREATE TABLE IF NOT EXISTS regras_categoria (
 ) ENGINE=InnoDB;
 
 
--- Histórico do chat com a Claude (Fase 4).
+-- historico do chat (Fase 4)
 CREATE TABLE IF NOT EXISTS conversas (
     id        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     papel     ENUM('user','assistant') NOT NULL,
@@ -89,14 +72,31 @@ CREATE TABLE IF NOT EXISTS conversas (
 ) ENGINE=InnoDB;
 
 
--- Categorias iniciais, para não começar com a tabela vazia.
+-- registro de cada importacao, para auditoria e para o front mostrar o historico
+CREATE TABLE IF NOT EXISTS importacoes (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    arquivo       VARCHAR(255)    NOT NULL,
+    fonte         VARCHAR(20)     NOT NULL,
+    conta         VARCHAR(80)     NULL,
+    total_linhas  INT             NOT NULL DEFAULT 0,
+    importadas    INT             NOT NULL DEFAULT 0,
+    duplicadas    INT             NOT NULL DEFAULT 0,
+    com_erro      INT             NOT NULL DEFAULT 0,
+    criado_em     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    KEY idx_importacoes_criado_em (criado_em)
+) ENGINE=InnoDB;
+
+
 INSERT IGNORE INTO categorias (nome, cor) VALUES
-    ('Alimentação',  '#e07a5f'),
-    ('Mercado',      '#3d5a80'),
-    ('Transporte',   '#81b29a'),
-    ('Moradia',      '#f2cc8f'),
-    ('Saúde',        '#e63946'),
-    ('Educação',     '#457b9d'),
-    ('Lazer',        '#9d4edd'),
-    ('Assinaturas',  '#2a9d8f'),
-    ('Outros',       '#8d99ae');
+    ('Alimentação',  '#e0803a'),
+    ('Mercado',      '#38e07b'),
+    ('Transporte',   '#3aa0e0'),
+    ('Moradia',      '#e0c93a'),
+    ('Saúde',        '#e05a6a'),
+    ('Educação',     '#3ae0d0'),
+    ('Lazer',        '#9a7ae0'),
+    ('Assinaturas',  '#e03ab0'),
+    ('Entrada',      '#38e07b'),
+    ('Outros',       '#6f8279');
