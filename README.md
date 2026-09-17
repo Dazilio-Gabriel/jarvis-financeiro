@@ -12,6 +12,25 @@ veículo para aprender Go de verdade.
 
 ---
 
+## Projeto Integrador IV (FAESA, 2026/2)
+
+Este repositório é o trabalho do grupo na disciplina **Projeto Integrador IV — Aplicações de
+Inteligência Artificial** (Prof. M.Sc. Howard Cruz Roatti, [@howardroatti](https://github.com/howardroatti)).
+Área temática: Trabalho e Empreendedorismo (educação financeira e endividamento das famílias).
+
+| Entrega | Prazo | Onde está |
+|---|---|---|
+| **C1 — Relatório** (escopo, justificativa, metodologia, plano de trabalho, comunidade e indicadores) | 18/09/2026 | [docs/entregas/C1-relatorio.md](docs/entregas/C1-relatorio.md) |
+| C2 — Protótipo em vídeo (IA funcionando + primeiros testes/eval) | 30/10/2026 | _em andamento_ |
+| C3 — MVP (vídeo, código, testes + eval, deploy com URL pública, análise de impacto) | 04/12/2026 | _planejado_ |
+
+O componente de IA (chat sobre os dados via LLM com **tool calling**) usa a **GroqCloud** como
+provedor padrão de custo zero, atrás de uma interface que permite trocar por Claude API ou modelo
+local. O uso de IA no desenvolvimento é registrado com os prompts em
+[docs/USO-DE-IA.md](docs/USO-DE-IA.md), como exige o edital.
+
+---
+
 ## Como rodar
 
 ### Pré-requisitos
@@ -189,7 +208,7 @@ Tabelas: `categorias`, `transacoes`, `regras_categoria`, `conversas`, `importaco
 ## Segurança
 
 1. **Nunca comitar segredos.** `.env` no `.gitignore` desde o primeiro commit.
-2. **A chave da Claude API nunca vai para o frontend.** Chave no browser é chave vazada.
+2. **A chave da API do LLM (Groq, Claude) nunca vai para o frontend.** Chave no browser é chave vazada.
 3. **Autenticação antes de expor na internet.** Enquanto for `localhost`, tudo bem.
 4. **HTTPS obrigatório em produção.** Caddy resolve o certificado sozinho.
 5. **Backup do banco.** `mysqldump` diário. Sem backup, um disco morto apaga o histórico inteiro.
@@ -199,6 +218,8 @@ Tabelas: `categorias`, `transacoes`, `regras_categoria`, `conversas`, `importaco
 
 ## Documentos
 
+- [docs/entregas/C1-relatorio.md](docs/entregas/C1-relatorio.md) — relatório da Entrega 1 do PI IV
+- [docs/USO-DE-IA.md](docs/USO-DE-IA.md) — registro de uso de IA no desenvolvimento, com os prompts
 - [ROADMAP.md](ROADMAP.md) — as 8 fases e o que cada uma ensina de Go
 - [INTEGRACAO.md](INTEGRACAO.md) — API com token para n8n e automações
 - [SETUP-DEV.md](SETUP-DEV.md) — instância MySQL de desenvolvimento

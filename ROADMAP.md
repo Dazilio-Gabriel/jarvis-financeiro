@@ -17,7 +17,7 @@ por trás estiverem certos.
 | **1** | Domínio + MySQL | ✅ pronto |
 | **2** | Importador de CSV com deduplicação | ✅ pronto |
 | **3** | API REST + telas | ✅ pronto |
-| **4** | Chat com a Claude API via tool use | ⬜ próxima |
+| **4** | Chat com LLM via tool calling (Groq, Claude ou local) | ⬜ próxima |
 | **5** | Painel e orçamento refinados | 🟨 parcial — orçamento e gráfico já existem |
 | **6** | `go:embed` + PWA | ⬜ |
 | **7** | Deploy, autenticação, Open Finance | ⬜ |
@@ -25,6 +25,17 @@ por trás estiverem certos.
 
 **Fora do roadmap original, já feito:** superfície `/api/integracao/*` protegida por token,
 pronta para o n8n — ver [INTEGRACAO.md](INTEGRACAO.md).
+
+### Checkpoints do Projeto Integrador IV
+
+| Checkpoint | Prazo | Fases | O que precisa existir |
+|---|---|---|---|
+| **C1 — Relatório** | 18/09/2026 | 0 a 3 prontas | [Relatório](docs/entregas/C1-relatorio.md), repositório organizado, professor colaborador |
+| **C2 — Protótipo (vídeo)** | 30/10/2026 | 4 | Chat com tool calling funcionando, testes unitários/integração, eval v1, CI |
+| **C3 — MVP (vídeo + código + deploy)** | 04/12/2026 | 5, 6 e 7 (sem Open Finance) | Autenticação, binário único, deploy free tier com URL pública, eval v2, alertas, análise de impacto |
+
+WhatsApp (Fase 8) e Open Finance (parte da Fase 7) ficam **fora do MVP da disciplina**; o
+cronograma semanal está na seção 9 do relatório.
 
 ---
 
@@ -138,20 +149,22 @@ Você abre `localhost:5173` e vê seus gastos reais numa tela.
 
 ---
 
-## Fase 4 — O chat com a Claude API
+## Fase 4 — O chat com o LLM (tool calling)
 
 **Entrega**
 - `POST /api/chat` que responde perguntas sobre os dados reais
 - Chat lateral no frontend
+- Interface `Assistente` com o provedor atrás dela: **GroqCloud** (API compatível com OpenAI,
+  modelos Llama, free tier) como padrão da disciplina; Claude API ou Ollama como alternativas
 
 **Como isso deve funcionar — a parte que muita gente erra**
 
 **Não mande o banco inteiro no prompt.** O padrão certo é **tool use** (function calling):
 
 1. Você define ferramentas em Go: `buscar_transacoes(periodo, categoria)`, `somar_por_categoria(mes)`
-2. O Claude decide qual chamar a partir da pergunta
+2. O modelo decide qual chamar a partir da pergunta
 3. Seu código Go executa a consulta SQL e devolve o resultado
-4. O Claude formula a resposta em português com base no dado real
+4. O modelo formula a resposta em português com base no dado real
 
 Isso é mais barato, mais preciso, e escala conforme o histórico cresce. Despejar transações no
 prompt fica caro e impreciso rápido.
