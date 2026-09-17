@@ -4,13 +4,15 @@ Uso:  python scripts/relatorio-pdf.py docs/entregas/C1-relatorio.md
 Requer: pip install markdown  (o Edge ja vem com o Windows).
 O PDF sai ao lado do .md, com o mesmo nome.
 """
-import io, sys, subprocess, pathlib, tempfile, time, markdown
+import io, re, sys, subprocess, pathlib, tempfile, time, markdown
 
 src = pathlib.Path(sys.argv[1]).resolve()
 out_pdf = src.with_suffix('.pdf')
 out_html = pathlib.Path(tempfile.gettempdir()) / (src.stem + '.html')
 body = markdown.markdown(io.open(src, encoding='utf-8').read(),
                          extensions=['tables', 'fenced_code', 'sane_lists', 'toc'])
+# Tabela chave/valor do Markdown exige cabecalho; se ele for vazio, some do PDF.
+body = re.sub(r'<thead>\s*<tr>(?:\s*<th>\s*</th>)+\s*</tr>\s*</thead>', '', body)
 css = """
 @page { size: A4; margin: 22mm 18mm 20mm 18mm; }
 body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; }
