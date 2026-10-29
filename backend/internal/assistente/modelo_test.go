@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // servidor falso no formato da API OpenAI/Groq: confere o pedido e devolve um tool call
@@ -57,9 +58,35 @@ func TestGroqErroHTTP(t *testing.T) {
 
 	loGroq := NovoGroq("x", "")
 	loGroq.url = loServ.URL
+	loGroq.espera = time.Millisecond
 
 	_, _, err := loGroq.Completar(context.Background(), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "429") {
 		t.Errorf("err = %v, esperado erro com o status 429", err)
+	}
+}
+
+func TestGroqRepeteDepoisDo429(t *testing.T) {
+	lnCham := 0
+	loServ := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lnCham++
+		if lnCham < 3 {
+			w.Header().Set("Retry-After", "0.01")
+			http.Error(w, "limite", http.StatusTooManyRequests)
+			return
+		}
+		w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"ok"}}]}`))
+	}))
+	defer loServ.Close()
+
+	loGroq := NovoGroq("x", "")
+	loGroq.url = loServ.URL
+
+	loMens, _, err := loGroq.Completar(context.Background(), nil, nil)
+	if err != nil || loMens.Content != "ok" {
+		t.Fatalf("mens = %+v, err = %v", loMens, err)
+	}
+	if lnCham != 3 {
+		t.Errorf("%d chamadas, esperado 3 (duas com 429)", lnCham)
 	}
 }

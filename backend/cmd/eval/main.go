@@ -37,7 +37,7 @@ func main() {
 	lcCaso := flag.String("casos", "eval/casos.json", "arquivo com as perguntas")
 	lcSaid := flag.String("saida", "../docs/eval", "pasta do relatorio")
 	lcHoje := flag.String("hoje", "2026-10-29", "data de hoje para o assistente (a base sintetica vai ate 28/10/2026)")
-	ldPaus := flag.Duration("pausa", 4*time.Second, "pausa entre perguntas, para caber no limite por minuto do free tier")
+	ldPaus := flag.Duration("pausa", 12*time.Second, "pausa entre perguntas: o free tier do gpt-oss-120b aceita 8 mil tokens por minuto")
 	lcSo := flag.String("so", "", "roda so os casos com estes ids, separados por virgula")
 	flag.Parse()
 
@@ -99,7 +99,7 @@ func main() {
 
 	lcMode := loConf.GroqModel
 	if lcMode == "" {
-		lcMode = "llama-3.3-70b-versatile"
+		lcMode = assistente.ModeloPadrao
 	}
 	lcArqu, err := gravarRelatorio(*lcSaid, lcMode, ldHoje, laExec)
 	if err != nil {

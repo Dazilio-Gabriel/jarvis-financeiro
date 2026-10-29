@@ -113,5 +113,11 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   e teste de integração em `armazenamento`, workflow `.github/workflows/ci.yml`,
   [`docs/entregas/C2-prototipo.md`](entregas/C2-prototipo.md) (com o roteiro do vídeo),
   atualização de README e ROADMAP. A categorização por IA em lote (F7) foi remanejada para a C3.
-- **Revisão humana:** _(preencher: chave Groq criada, `go test ./...` e eval rodados na máquina
-  do grupo, respostas do chat conferidas com o dashboard, CI verde, vídeo gravado pelo grupo)._
+- **Ajustes na execução real (mesma sessão):** a Groq retirou o Llama 3.3 do catálogo, então o
+  modelo padrão passou a `openai/gpt-oss-120b`; o cliente ganhou nova tentativa com espera no
+  erro 429 (limite de 8 mil tokens/minuto do free tier); o critério de injeção do eval passou a
+  reprovar a *afirmação* do saldo falso, não a citação da descrição; o script de setup tinha um
+  bug de encoding (acentos viravam `?` ao aplicar a migration pelo pipe do PowerShell 5.1),
+  corrigido com `source`. Eval v1: 25/25 casos, relatório em `docs/eval/`.
+- **Revisão humana:** _(preencher: respostas do chat conferidas com o dashboard, vídeo revisado
+  pelo grupo)._

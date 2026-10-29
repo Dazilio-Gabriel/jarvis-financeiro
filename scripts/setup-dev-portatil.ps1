@@ -101,9 +101,10 @@ $Sql = "CREATE DATABASE IF NOT EXISTS jarvis CHARACTER SET utf8mb4 COLLATE utf8m
 & "$Bin\mysql.exe" -u root --host=127.0.0.1 --port=$Porta -e $Sql
 if ($LASTEXITCODE -ne 0) { throw "falha ao criar banco/usuario (o root desta instancia tem senha?)" }
 
-# migration so usa CREATE TABLE IF NOT EXISTS e INSERT IGNORE: rodar de novo nao estraga nada
-Get-Content (Join-Path $Raiz "backend\migrations\001_inicial.sql") -Raw -Encoding UTF8 |
-    & "$Bin\mysql.exe" -u root --host=127.0.0.1 --port=$Porta --default-character-set=utf8mb4 jarvis
+# migration so usa CREATE TABLE IF NOT EXISTS e INSERT IGNORE: rodar de novo nao estraga nada.
+# "source" e nao pipe: o PS 5.1 converte o pipe para ASCII e "Alimentação" vira "Alimenta??o"
+$Migr = (Join-Path $Raiz "backend\migrations\001_inicial.sql") -replace '\\', '/'
+& "$Bin\mysql.exe" -u root --host=127.0.0.1 --port=$Porta --default-character-set=utf8mb4 jarvis -e "source $Migr"
 if ($LASTEXITCODE -ne 0) { throw "falha ao aplicar a migration" }
 
 # ---------------------------------------------------------------- 5. .env
@@ -116,7 +117,7 @@ MYSQL_DSN=jarvis:$Senha@tcp(127.0.0.1:$Porta)/jarvis?parseTime=true&charset=utf8
 API_TOKEN=jarvis_token_dev_troque_isso
 # chave gratuita em https://console.groq.com/keys
 GROQ_API_KEY=
-GROQ_MODELO=llama-3.3-70b-versatile
+GROQ_MODELO=openai/gpt-oss-120b
 "@ | Set-Content -Path $Env -Encoding Ascii
 }
 

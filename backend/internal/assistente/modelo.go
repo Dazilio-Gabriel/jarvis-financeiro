@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -47,19 +48,28 @@ type Groq struct {
 	modelo string
 	url    string
 	http   *http.Client
+	espera time.Duration // base do recuo quando a Groq nao manda Retry-After
 }
+
+// free tier limita tokens por minuto: no 429 vale esperar e repetir, nao falhar de cara
+const nTentativas = 4
 
 const cURLGroq = "https://api.groq.com/openai/v1/chat/completions"
 
+// ModeloPadrao: modelo aberto com tool calling no free tier. A Groq tirou o Llama 3.3 do
+// catalogo em 2026; trocar e so mudar GROQ_MODELO no .env.
+const ModeloPadrao = "openai/gpt-oss-120b"
+
 func NovoGroq(pcChav, pcMode string) *Groq {
 	if pcMode == "" {
-		pcMode = "llama-3.3-70b-versatile"
+		pcMode = ModeloPadrao
 	}
 	return &Groq{
 		chave:  pcChav,
 		modelo: pcMode,
 		url:    cURLGroq,
 		http:   &http.Client{Timeout: 60 * time.Second},
+		espera: 2 * time.Second,
 	}
 }
 
@@ -79,25 +89,32 @@ func (g *Groq) Completar(ctx context.Context, paMens []Mensagem, paFerr []Ferram
 		return Mensagem{}, Uso{}, err
 	}
 
-	loReq, err := http.NewRequestWithContext(ctx, http.MethodPost, g.url, bytes.NewReader(laJSON))
-	if err != nil {
-		return Mensagem{}, Uso{}, err
-	}
-	loReq.Header.Set("Authorization", "Bearer "+g.chave)
-	loReq.Header.Set("Content-Type", "application/json")
+	var (
+		lnStat int
+		laResp []byte
+	)
+	for lnTent := 1; ; lnTent++ {
+		var lcEspe string
+		lnStat, laResp, lcEspe, err = g.postar(ctx, laJSON)
+		if err != nil {
+			return Mensagem{}, Uso{}, err
+		}
+		if lnStat != http.StatusTooManyRequests || lnTent == nTentativas {
+			break
+		}
 
-	loRes, err := g.http.Do(loReq)
-	if err != nil {
-		return Mensagem{}, Uso{}, fmt.Errorf("chamar groq: %w", err)
+		ldEspe := g.espera << (lnTent - 1) // 2s, 4s, 8s
+		if lnSegu, err := strconv.ParseFloat(lcEspe, 64); err == nil && lnSegu > 0 {
+			ldEspe = time.Duration(lnSegu*float64(time.Second)) + 200*time.Millisecond
+		}
+		select {
+		case <-ctx.Done():
+			return Mensagem{}, Uso{}, ctx.Err()
+		case <-time.After(min(ldEspe, 30*time.Second)):
+		}
 	}
-	defer loRes.Body.Close()
-
-	laResp, err := io.ReadAll(loRes.Body)
-	if err != nil {
-		return Mensagem{}, Uso{}, fmt.Errorf("ler resposta da groq: %w", err)
-	}
-	if loRes.StatusCode != http.StatusOK {
-		return Mensagem{}, Uso{}, fmt.Errorf("groq respondeu %d: %s", loRes.StatusCode, laResp)
+	if lnStat != http.StatusOK {
+		return Mensagem{}, Uso{}, fmt.Errorf("groq respondeu %d: %s", lnStat, laResp)
 	}
 
 	var loSaid struct {
@@ -113,4 +130,26 @@ func (g *Groq) Completar(ctx context.Context, paMens []Mensagem, paFerr []Ferram
 		return Mensagem{}, loSaid.Usage, fmt.Errorf("groq nao devolveu resposta")
 	}
 	return loSaid.Choices[0].Message, loSaid.Usage, nil
+}
+
+// postar faz uma ida a API e devolve status, corpo e o Retry-After (vazio se nao veio)
+func (g *Groq) postar(ctx context.Context, paJSON []byte) (int, []byte, string, error) {
+	loReq, err := http.NewRequestWithContext(ctx, http.MethodPost, g.url, bytes.NewReader(paJSON))
+	if err != nil {
+		return 0, nil, "", err
+	}
+	loReq.Header.Set("Authorization", "Bearer "+g.chave)
+	loReq.Header.Set("Content-Type", "application/json")
+
+	loRes, err := g.http.Do(loReq)
+	if err != nil {
+		return 0, nil, "", fmt.Errorf("chamar groq: %w", err)
+	}
+	defer loRes.Body.Close()
+
+	laResp, err := io.ReadAll(loRes.Body)
+	if err != nil {
+		return 0, nil, "", fmt.Errorf("ler resposta da groq: %w", err)
+	}
+	return loRes.StatusCode, laResp, loRes.Header.Get("Retry-After"), nil
 }

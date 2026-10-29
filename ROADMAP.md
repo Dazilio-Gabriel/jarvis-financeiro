@@ -155,7 +155,7 @@ Você abre `localhost:5173` e vê seus gastos reais numa tela.
 - `POST /api/chat` que responde perguntas sobre os dados reais
 - Chat lateral no frontend
 - Interface `Assistente` com o provedor atrás dela: **GroqCloud** (API compatível com OpenAI,
-  modelos Llama, free tier) como padrão da disciplina; Claude API ou Ollama como alternativas
+  modelos abertos como GPT-OSS e Qwen, free tier) como padrão da disciplina; Claude API ou Ollama como alternativas
 
 **Como isso deve funcionar — a parte que muita gente erra**
 
