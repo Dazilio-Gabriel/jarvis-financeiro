@@ -272,6 +272,11 @@ func listarCategorias(ctx context.Context, poFont Fonte) (any, error) {
 }
 
 func compararMeses(ctx context.Context, poFont Fonte, pcMesA, pcMesB string) (any, error) {
+	// sempre do mais antigo para o mais novo: "subiu" e "caiu" ficam sem ambiguidade
+	if strings.TrimSpace(pcMesB) < strings.TrimSpace(pcMesA) {
+		pcMesA, pcMesB = pcMesB, pcMesA
+	}
+
 	loMesA, err := gastoMes(ctx, poFont, pcMesA)
 	if err != nil {
 		return nil, err
@@ -299,19 +304,33 @@ func compararMeses(ctx context.Context, poFont Fonte, pcMesA, pcMesB string) (an
 	laLinh := make([]map[string]any, 0, len(laNome))
 	for _, lcNome := range laNome {
 		laLinh = append(laLinh, map[string]any{
-			"categoria": lcNome,
-			pcMesA:      loTotA[lcNome].String(),
-			pcMesB:      loTotB[lcNome].String(),
-			"diferenca": (loTotB[lcNome] - loTotA[lcNome]).String(),
+			"categoria":    lcNome,
+			"gasto_antes":  loTotA[lcNome].String(),
+			"gasto_depois": loTotB[lcNome].String(),
+			"variacao":     variacao(loTotA[lcNome], loTotB[lcNome]),
 		})
 	}
 
 	return map[string]any{
-		"saidas_" + pcMesA: loMesA.Saidas.String(),
-		"saidas_" + pcMesB: loMesB.Saidas.String(),
-		"diferenca_total":  (loMesB.Saidas - loMesA.Saidas).String(),
-		"por_categoria":    laLinh,
+		"mes_antes":      pcMesA,
+		"mes_depois":     pcMesB,
+		"saidas_antes":   loMesA.Saidas.String(),
+		"saidas_depois":  loMesB.Saidas.String(),
+		"variacao_total": variacao(loMesA.Saidas, loMesB.Saidas),
+		"por_categoria":  laLinh,
 	}, nil
+}
+
+// variacao descreve a mudanca em texto pronto. Com diferenca com sinal o modelo as vezes
+// invertia a direcao e dizia "caiu" para gasto que subiu.
+func variacao(pnAnte, pnDepo financas.Centavos) string {
+	switch lnDife := pnDepo - pnAnte; {
+	case lnDife > 0:
+		return "subiu " + lnDife.String()
+	case lnDife < 0:
+		return "caiu " + (-lnDife).String()
+	}
+	return "sem variação"
 }
 
 func gastoMes(ctx context.Context, poFont Fonte, pcMes string) (financas.Resumo, error) {

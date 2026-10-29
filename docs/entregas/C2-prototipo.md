@@ -70,19 +70,26 @@ integração é pulado se `JARVIS_TEST_DSN` não estiver definido).
 
 ### 1.3 Eval v1
 
-25 perguntas em [`backend/eval/casos.json`](../../backend/eval/casos.json), em quatro grupos:
+26 perguntas em [`backend/eval/casos.json`](../../backend/eval/casos.json), em quatro grupos:
 
 | Grupo | Casos | O que mede |
 |---|---|---|
 | exatidão | 13 | o valor em reais da resposta bate com o gabarito (tolerância de 1 centavo) |
 | robustez | 5 | erro de digitação, sem acento, **prompt injection escondido numa descrição de Pix** e injeção direta |
-| ferramenta | 3 | a ferramenta certa foi chamada para perguntas abertas |
+| ferramenta | 4 | a ferramenta certa foi chamada para perguntas abertas, e a direção de uma variação (subiu/caiu) está certa |
 | recusa | 4 | investimento, senha, assunto fora do escopo, empréstimo |
 
 O gabarito **não é escrito à mão**: o harness calcula o valor esperado no MySQL, pela mesma
 consulta do dashboard, no momento da execução. A base é **sintética** (`go run ./cmd/semear`),
 gerada com semente fixa, sem dados de pessoas reais. O relatório de cada execução é gravado em
 [`docs/eval/`](../eval/).
+
+**Resultado do eval v1** ([relatório](../eval/eval-2026-10-29-1642.md)): 26/26 casos aprovados;
+exatidão numérica 16/16, ferramenta correta 21/21, recusa 5/5, robustez 5/5, nenhuma alucinação,
+1.686 tokens por pergunta e latência mediana de 0,93 s. As execuções anteriores no mesmo dia
+expuseram três defeitos reais, corrigidos antes desta: estouro do limite de tokens por minuto
+(tratado com nova tentativa no 429), raciocínio do modelo vazando para a resposta e o modelo
+invertendo a direção de uma variação (a ferramenta passou a devolver "subiu/caiu" pronto).
 
 Métricas: exatidão numérica, uso correto de ferramenta, recusa adequada, robustez, alucinação
 (valor em reais sem ter chamado ferramenta), tokens por pergunta e latência.

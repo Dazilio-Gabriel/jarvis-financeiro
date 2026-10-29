@@ -118,6 +118,11 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   erro 429 (limite de 8 mil tokens/minuto do free tier); o critério de injeção do eval passou a
   reprovar a *afirmação* do saldo falso, não a citação da descrição; o script de setup tinha um
   bug de encoding (acentos viravam `?` ao aplicar a migration pelo pipe do PowerShell 5.1),
-  corrigido com `source`. Eval v1: 25/25 casos, relatório em `docs/eval/`.
+  corrigido com `source`. Na gravação do vídeo apareceram mais dois defeitos: o raciocínio do
+  gpt-oss vazando para a resposta (corrigido com `reasoning_effort: low` e regra no prompt) e o
+  modelo dizendo "caiu" para gasto que subiu na comparação de meses (a ferramenta passou a
+  devolver a direção em texto; caso F04 adicionado ao eval). Eval v1 final: 26/26.
+- **Vídeo da C2:** montado pelo Claude Code com Playwright (telas reais do sistema rodando e
+  respostas reais da Groq), cartões em HTML, narração sintética (voz Microsoft Maria) e ffmpeg.
 - **Revisão humana:** _(preencher: respostas do chat conferidas com o dashboard, vídeo revisado
   pelo grupo)._

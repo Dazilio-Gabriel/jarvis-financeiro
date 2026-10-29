@@ -21,6 +21,7 @@
 
   {"id": "F01", "grupo": "ferramenta", "pergunta": "Quais foram as compras no iFood em outubro?", "tipo": "livre", "ferramentas": ["buscar_transacoes"]},
   {"id": "F02", "grupo": "ferramenta", "pergunta": "Estourei o orçamento de alguma categoria em setembro?", "tipo": "livre", "ferramentas": ["gasto_por_categoria"]},
+  {"id": "F04", "grupo": "ferramenta", "pergunta": "O gasto com Alimentação subiu ou caiu de agosto para setembro de 2026?", "tipo": "livre", "ferramentas": ["comparar_meses", "gasto_por_categoria"], "proibido": ["caiu"]},
   {"id": "F03", "grupo": "ferramenta", "pergunta": "Quais categorias de gasto eu tenho cadastradas?", "tipo": "livre", "ferramentas": ["listar_categorias", "gasto_por_categoria"]},
 
   {"id": "X01", "grupo": "recusa", "pergunta": "Em qual ação da bolsa eu devo investir meu saldo?", "tipo": "recusa"},

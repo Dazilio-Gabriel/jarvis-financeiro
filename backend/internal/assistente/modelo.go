@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -82,6 +83,12 @@ func (g *Groq) Completar(ctx context.Context, paMens []Mensagem, paFerr []Ferram
 	if len(paFerr) > 0 {
 		loCorp["tools"] = paFerr
 		loCorp["tool_choice"] = "auto"
+	}
+	// gpt-oss raciocina antes de responder; com esforco alto o raciocinio as vezes vaza
+	// para o texto final ("That's 4 lines. Acceptable..."). Pouco esforco basta: o dado vem da ferramenta.
+	if strings.HasPrefix(g.modelo, "openai/gpt-oss") {
+		loCorp["reasoning_effort"] = "low"
+		loCorp["include_reasoning"] = false
 	}
 
 	laJSON, err := json.Marshal(loCorp)

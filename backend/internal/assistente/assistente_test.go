@@ -176,7 +176,8 @@ func TestExecutarFerramentas(t *testing.T) {
 		{"categoria inexistente", "buscar_transacoes", `{"categoria":"Viagem"}`, `nao existe`},
 		{"argumento nulo", "buscar_transacoes", `{"de":null,"busca":"x"}`, `"quantidade":1`},
 		{"listar", "listar_categorias", ``, `"orcamento":"R$ 500,00"`},
-		{"comparar", "comparar_meses", `{"mes_a":"2026-08","mes_b":"2026-09"}`, `"diferenca_total":"R$ 0,00"`},
+		{"comparar", "comparar_meses", `{"mes_a":"2026-09","mes_b":"2026-08"}`, `"mes_antes":"2026-08"`},
+		{"comparar igual", "comparar_meses", `{"mes_a":"2026-08","mes_b":"2026-09"}`, `"variacao_total":"sem variação"`},
 		{"desconhecida", "apagar_tudo", `{}`, `ferramenta desconhecida`},
 		{"json quebrado", "listar_categorias", `{`, `argumentos invalidos`},
 	}
@@ -200,6 +201,19 @@ func TestExecutarFerramentas(t *testing.T) {
 	}
 	if loFont.filtro.Limite != 20 {
 		t.Errorf("limite = %d, esperado 20", loFont.filtro.Limite)
+	}
+}
+
+func TestVariacaoDizADirecao(t *testing.T) {
+	casos := map[[2]financas.Centavos]string{
+		{47886, 72879}: "subiu R$ 249,93",
+		{36630, 18584}: "caiu R$ 180,46",
+		{28900, 28900}: "sem variação",
+	}
+	for loPar, lcEspe := range casos {
+		if lcSaid := variacao(loPar[0], loPar[1]); lcSaid != lcEspe {
+			t.Errorf("variacao(%d, %d) = %q, esperado %q", loPar[0], loPar[1], lcSaid, lcEspe)
+		}
 	}
 }
 
