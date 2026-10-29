@@ -3,14 +3,17 @@ setlocal
 
 rem Sobe a instancia de desenvolvimento do MySQL na porta 3307.
 rem Ela nao e servico do Windows: existe enquanto esta janela estiver aberta.
-rem Detalhes do porque em SETUP-DEV.md.
+rem Criada por scripts\setup-dev-portatil.ps1; detalhes em SETUP-DEV.md.
 
-set "MYSQLD=C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe"
-set "CFG=C:\Users\Dazilio\jarvis-mysql\my.ini"
+set "CFG=%USERPROFILE%\jarvis-mysql\my.ini"
+
+rem ZIP portatil do setup tem prioridade; senao usa o MySQL 8.4 instalado pelo MSI
+set "MYSQLD=%USERPROFILE%\jarvis-mysql\bin\mysqld.exe"
+if not exist "%MYSQLD%" set "MYSQLD=C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe"
 
 if not exist "%MYSQLD%" (
-  echo mysqld.exe nao encontrado em:
-  echo   %MYSQLD%
+  echo mysqld.exe nao encontrado. Rode antes:
+  echo   powershell -ExecutionPolicy Bypass -File scripts\setup-dev-portatil.ps1
   pause
   exit /b 1
 )
@@ -18,7 +21,7 @@ if not exist "%MYSQLD%" (
 if not exist "%CFG%" (
   echo my.ini nao encontrado em:
   echo   %CFG%
-  echo Veja SETUP-DEV.md para recriar a instancia.
+  echo Rode scripts\setup-dev-portatil.ps1 para criar a instancia.
   pause
   exit /b 1
 )

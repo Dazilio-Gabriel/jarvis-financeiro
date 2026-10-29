@@ -1,5 +1,24 @@
 # Ambiente de desenvolvimento
 
+## Jeito rápido (qualquer PC, sem admin)
+
+Da raiz do repositório:
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\setup-dev-portatil.ps1
+```
+
+Ele baixa o MySQL 8.4 portátil para `%USERPROFILE%\jarvis-mysql` (ou aproveita o 8.4 já
+instalado em `C:\Program Files`), sobe na **porta 3307** sem tocar em outro MySQL do PC, cria
+banco, usuário e tabelas, gera o `backend\.env` se não existir e grava a base sintética. Pode
+rodar de novo: cada passo pula o que já estiver feito.
+
+Depois, só falta colar a `GROQ_API_KEY` no `backend\.env` (chave grátis em
+<https://console.groq.com/keys>). No dia a dia: `scripts\mysql-dev.bat` (se o banco não estiver
+no ar, por exemplo depois de reiniciar) e `dev.bat`.
+
+O resto deste arquivo é o histórico da instalação manual.
+
 ## Ordem para subir tudo
 
 O `dev.bat` que você escreveu sobe a API e o Vite, mas depende de duas coisas antes:
