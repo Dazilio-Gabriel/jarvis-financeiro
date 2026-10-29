@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/assistente"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/config"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/web"
 )
@@ -34,9 +35,17 @@ func main() {
 	}
 	defer loRepo.Fechar()
 
+	loWeb := web.NovoServidor(loRepo, loConf.APIToken)
+	if loConf.GroqKey != "" {
+		loWeb.ComAssistente(assistente.Novo(assistente.NovoGroq(loConf.GroqKey, loConf.GroqModel), loRepo))
+		log.Println("assistente ligado (GroqCloud)")
+	} else {
+		log.Println("GROQ_API_KEY vazio: chat desligado, o resto funciona normal")
+	}
+
 	loServ := &http.Server{
 		Addr:              ":" + loConf.Porta,
-		Handler:           web.NovoServidor(loRepo, loConf.APIToken).Rotas(),
+		Handler:           loWeb.Rotas(),
 		ReadHeaderTimeout: 5 * time.Second, // sem isso conexao lenta segura o handler pra sempre
 	}
 

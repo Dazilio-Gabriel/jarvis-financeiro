@@ -7,8 +7,10 @@ no WhatsApp.
 Backend em **Go**, frontend em **React + TypeScript**, banco **MySQL**. O projeto também é um
 veículo para aprender Go de verdade.
 
-> **Status:** Fases 0 a 3 funcionando — servidor, domínio, MySQL, importação de CSV, API REST e
-> as telas. Ver [ROADMAP.md](ROADMAP.md).
+> **Status:** Fases 0 a 4 funcionando — servidor, domínio, MySQL, importação de CSV, API REST,
+> as telas e o **chat com LLM via tool calling**, com testes, CI e eval. Ver [ROADMAP.md](ROADMAP.md).
+
+[![CI](https://github.com/Dazilio-Gabriel/jarvis-financeiro/actions/workflows/ci.yml/badge.svg)](https://github.com/Dazilio-Gabriel/jarvis-financeiro/actions/workflows/ci.yml)
 
 ---
 
@@ -21,7 +23,7 @@ Inteligência Artificial** (Prof. M.Sc. Howard Cruz Roatti, [@howardroatti](http
 | Entrega | Prazo | Onde está |
 |---|---|---|
 | **C1 — Relatório** (escopo, justificativa, metodologia, plano de trabalho, comunidade e indicadores) | 18/09/2026 | [docs/entregas/C1-relatorio.md](docs/entregas/C1-relatorio.md) |
-| C2 — Protótipo em vídeo (IA funcionando + primeiros testes/eval) | 30/10/2026 | _em andamento_ |
+| **C2 — Protótipo em vídeo** (chat com tool calling, testes + CI, eval v1) | 30/10/2026 | [docs/entregas/C2-prototipo.md](docs/entregas/C2-prototipo.md) · vídeo: _(link)_ |
 | C3 — MVP (vídeo, código, testes + eval, deploy com URL pública, análise de impacto) | 04/12/2026 | _planejado_ |
 
 O componente de IA (chat sobre os dados via LLM com **tool calling**) usa a **GroqCloud** como
@@ -70,6 +72,16 @@ cp backend/.env.example backend/.env
 
 Edite `backend/.env` com a senha do MySQL e o token da API. O `.env` está no `.gitignore`.
 
+Para ligar o chat, crie uma chave gratuita em <https://console.groq.com/keys> e preencha
+`GROQ_API_KEY`. Sem ela o sistema sobe normal e só o chat responde 503.
+
+Base sintética para demonstração e eval (julho a outubro de 2026, sem dados reais):
+
+```bash
+cd backend
+go run ./cmd/semear -orcamentos   # -orcamentos sobrescreve as metas de Mercado, Alimentação e Lazer
+```
+
 ### 3. Backend
 
 ```bash
@@ -91,6 +103,14 @@ npm run dev
 
 Abra `http://localhost:5173`.
 
+### 5. Testes e eval
+
+```bash
+cd backend
+go test ./...        # unitários; o de integração roda se JARVIS_TEST_DSN apontar para um MySQL
+go run ./cmd/eval    # eval do assistente sobre a base sintética -> docs/eval/
+```
+
 O Vite roda na 5173 e o Go na 8080 — origens diferentes, o que daria erro de CORS. O proxy em
 `vite.config.ts` repassa `/api` para o Go, então o navegador enxerga uma origem só. Em produção
 o binário Go serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa de existir.
@@ -106,6 +126,7 @@ o binário Go serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa d
 | `/transacoes` | lista com filtro de período, categoria e busca; troca de categoria inline |
 | `/importar` | envio de CSV com conferência antes de gravar e histórico de importações |
 | `/categorias` | meta mensal por categoria e regras de categorização automática |
+| `/chat` | assistente: perguntas em português sobre os gastos, respondidas via tool calling |
 
 ---
 
@@ -128,6 +149,7 @@ impediria ordenar e somar no cliente.
 | GET/POST | `/api/regras` | regras de categorização |
 | POST | `/api/importar` | upload de CSV (multipart) |
 | GET | `/api/importacoes` | histórico de importações |
+| POST | `/api/chat` | pergunta ao assistente (`{"pergunta": "...", "historico": [...]}`) |
 
 Superfície protegida por token para automação externa: `/api/integracao/*` —
 ver [INTEGRACAO.md](INTEGRACAO.md).

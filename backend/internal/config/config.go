@@ -12,6 +12,8 @@ type Config struct {
 	DSN       string
 	APIToken  string // protege /api/integracao/* (n8n, automacoes)
 	ClaudeKey string
+	GroqKey   string
+	GroqModel string
 }
 
 // Carregar le o .env (se existir) e monta a config.
@@ -24,6 +26,8 @@ func Carregar(pcCami string) Config {
 		DSN:       os.Getenv("MYSQL_DSN"),
 		APIToken:  os.Getenv("API_TOKEN"),
 		ClaudeKey: os.Getenv("ANTHROPIC_API_KEY"),
+		GroqKey:   os.Getenv("GROQ_API_KEY"),
+		GroqModel: os.Getenv("GROQ_MODELO"),
 	}
 }
 

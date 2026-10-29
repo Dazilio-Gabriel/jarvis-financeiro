@@ -17,7 +17,7 @@ por trás estiverem certos.
 | **1** | Domínio + MySQL | ✅ pronto |
 | **2** | Importador de CSV com deduplicação | ✅ pronto |
 | **3** | API REST + telas | ✅ pronto |
-| **4** | Chat com LLM via tool calling (Groq, Claude ou local) | ⬜ próxima |
+| **4** | Chat com LLM via tool calling (Groq, Claude ou local) | ✅ pronto (C2) — testes, CI e eval v1 |
 | **5** | Painel e orçamento refinados | 🟨 parcial — orçamento e gráfico já existem |
 | **6** | `go:embed` + PWA | ⬜ |
 | **7** | Deploy, autenticação, Open Finance | ⬜ |

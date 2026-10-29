@@ -185,3 +185,19 @@ export const importarCSV = (
   // sem Content-Type: o browser precisa gerar o boundary do multipart sozinho
   return pedir<ResultadoImport>('/api/importar', { method: 'POST', body: form })
 }
+
+export type Turno = { papel: 'usuario' | 'assistente'; conteudo: string }
+
+export type RespostaChat = {
+  resposta: string
+  ferramentas: string[]
+  tokens: number
+  ms: number
+}
+
+export const perguntar = (pergunta: string, historico: Turno[]) =>
+  pedir<RespostaChat>('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pergunta, historico }),
+  })

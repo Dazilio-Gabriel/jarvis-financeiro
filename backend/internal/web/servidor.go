@@ -15,10 +15,17 @@ import (
 type Servidor struct {
 	repo  *armazenamento.MySQL
 	token string
+	assis perguntador // nil = chat desligado (sem chave do LLM)
 }
 
 func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
 	return &Servidor{repo: poRepo, token: pcToke}
+}
+
+// ComAssistente liga o chat
+func (s *Servidor) ComAssistente(poAssi perguntador) *Servidor {
+	s.assis = poAssi
+	return s
 }
 
 func (s *Servidor) Rotas() http.Handler {
@@ -38,6 +45,8 @@ func (s *Servidor) Rotas() http.Handler {
 
 	loMux.HandleFunc("GET /api/resumo", s.resumo)
 	loMux.HandleFunc("GET /api/evolucao", s.evolucao)
+
+	loMux.HandleFunc("POST /api/chat", s.chat)
 
 	loMux.HandleFunc("POST /api/importar", s.importar)
 	loMux.HandleFunc("GET /api/importacoes", s.listarImportacoes)

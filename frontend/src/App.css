@@ -1182,6 +1182,125 @@ code {
   max-width: 42ch;
 }
 
+/* ===================================================================== CHAT */
+
+.chat {
+  padding: 0;
+  min-height: 60vh;
+}
+
+.chat-falas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.25rem;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.chat-sugestoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chat-sugestoes .rotulo {
+  width: 100%;
+}
+
+.fala {
+  max-width: 78%;
+  padding: 0.7rem 0.95rem;
+  border-radius: 12px;
+  border: 1px solid var(--borda);
+  animation: surgir 0.3s ease both;
+}
+
+.fala p {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+.fala.usuario {
+  align-self: flex-end;
+  background: var(--sup-verde);
+  border-color: var(--verde-borda);
+}
+
+.fala.assistente {
+  align-self: flex-start;
+  background: var(--fundo);
+}
+
+.fala.erro {
+  border-color: var(--vermelho-borda);
+  color: var(--vermelho);
+}
+
+.fala.pensando {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--txt-fraco);
+  font-size: 0.85rem;
+}
+
+.fala-rastro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--txt-fraco);
+}
+
+.fala-rastro code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  border: 1px solid var(--verde-borda);
+  color: var(--verde);
+}
+
+.fala-rastro span {
+  margin-left: auto;
+}
+
+.chat-entrada {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--borda);
+}
+
+.chat-entrada input {
+  flex: 1;
+  min-width: 0;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-family: inherit;
+  padding: 0.6rem 0.75rem;
+}
+
+.chat-entrada input:focus {
+  outline: none;
+  border-color: var(--verde-borda);
+  box-shadow: 0 0 0 3px var(--sup-verde);
+}
+
+@media (max-width: 760px) {
+  .fala {
+    max-width: 92%;
+  }
+}
+
 /* ================================================================ RESPONSIVO */
 
 @media (max-width: 900px) {

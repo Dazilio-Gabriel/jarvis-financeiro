@@ -261,6 +261,15 @@ func (m *MySQL) Contar(ctx context.Context, poFilt financas.Filtro) (int, error)
 	return lnTota, nil
 }
 
+// ApagarFonte remove as transacoes de uma origem; usado para recriar a base sintetica
+func (m *MySQL) ApagarFonte(ctx context.Context, pcFont string) (int64, error) {
+	loRes, err := m.db.ExecContext(ctx, `DELETE FROM transacoes WHERE fonte = ?`, pcFont)
+	if err != nil {
+		return 0, fmt.Errorf("apagar fonte %q: %w", pcFont, err)
+	}
+	return loRes.RowsAffected()
+}
+
 // Categorizar aplica uma categoria a uma transacao
 func (m *MySQL) Categorizar(ctx context.Context, pnTran int64, poCate *int64) error {
 	var loValo any

@@ -91,3 +91,27 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   fontes públicas (CNC/PEIC, Serasa, Fecomércio-ES, FEBRABAN) e as URLs estão nas referências.
 - **Revisão humana:** relatório revisado pelo autor antes do envio; composição do grupo e
   divisão de papéis preenchidas manualmente; commits e push feitos pelo autor.
+
+### 2026-10-29 — Entrega C2: chat com tool calling, testes, CI e eval v1
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5)
+- **Tarefa:** implementar o que o relatório C1 prometeu para a C2 (Fase 4: chat via LLM com tool
+  calling; testes unitários e de integração com CI; harness de eval v1) e preparar o roteiro do
+  vídeo do protótipo.
+- **Prompt (literal):**
+  > sobre esse repo aq https://github.com/Dazilio-Gabriel/jarvis-financeiro preciso para o trabalho
+  > da faculdade do jarvis financiero que voce tinha feito a um tempo atras, puxe naquela conversa
+  > oq o professor quer, pq preciso fazer a entrega 2 Entrega 2 — Vídeo do protótipo. Vídeo
+  > publicado no YouTube com a apresentação do protótipo da aplicação, demonstrando a viabilidade
+  > técnica da solução. Envie o link do vídeo (e do repositório). O GitHub do grupo deve estar
+  > atualizado (documentação + código-fonte); professor como colaborador. Trabalho em grupo (até 5).
+  > Requisitos completos e rubrica no Edital de Trabalhos.
+- **Resultado:** pacote `backend/internal/assistente` (cliente GroqCloud, cinco ferramentas
+  somente leitura, laço de tool calling, prompt de sistema versionado), rota `POST /api/chat`,
+  tela `/chat`, gerador de base sintética `cmd/semear`, harness `cmd/eval` + `eval/casos.json` +
+  pacote `avaliacao`, testes em `financas`, `util`, `importador`, `assistente`, `avaliacao`, `web`
+  e teste de integração em `armazenamento`, workflow `.github/workflows/ci.yml`,
+  [`docs/entregas/C2-prototipo.md`](entregas/C2-prototipo.md) (com o roteiro do vídeo),
+  atualização de README e ROADMAP. A categorização por IA em lote (F7) foi remanejada para a C3.
+- **Revisão humana:** _(preencher: chave Groq criada, `go test ./...` e eval rodados na máquina
+  do grupo, respostas do chat conferidas com o dashboard, CI verde, vídeo gravado pelo grupo)._
