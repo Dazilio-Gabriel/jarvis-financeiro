@@ -2,10 +2,12 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/util"
 )
@@ -18,7 +20,7 @@ type categoriaDTO struct {
 }
 
 func (s *Servidor) listarCategorias(w http.ResponseWriter, r *http.Request) {
-	laCate, err := s.repo.ListarCategorias(r.Context())
+	laCate, err := s.dados(r).ListarCategorias(r.Context())
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -58,7 +60,7 @@ func (s *Servidor) salvarOrcamento(w http.ResponseWriter, r *http.Request) {
 		loOrca = &lnVale
 	}
 
-	if err := s.repo.SalvarOrcamento(r.Context(), lnCate, loOrca); err != nil {
+	if err := s.dados(r).SalvarOrcamento(r.Context(), lnCate, loOrca); err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -76,7 +78,7 @@ type regraDTO struct {
 }
 
 func (s *Servidor) listarRegras(w http.ResponseWriter, r *http.Request) {
-	laRegr, err := s.repo.ListarRegras(r.Context())
+	laRegr, err := s.dados(r).ListarRegras(r.Context())
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -112,7 +114,11 @@ func (s *Servidor) criarRegra(w http.ResponseWriter, r *http.Request) {
 		Prioridade:  loDTO.Prioridade,
 	}
 
-	lnID, err := s.repo.CriarRegra(r.Context(), loRegr)
+	lnID, err := s.dados(r).CriarRegra(r.Context(), loRegr)
+	if errors.Is(err, armazenamento.ErrCategoriaAlheia) {
+		erroJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -148,7 +154,7 @@ func (s *Servidor) resumo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	loResu, err := s.repo.Resumo(r.Context(), ldDe, ldAte)
+	loResu, err := s.dados(r).Resumo(r.Context(), ldDe, ldAte)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -187,7 +193,7 @@ func (s *Servidor) evolucao(w http.ResponseWriter, r *http.Request) {
 		lnMese = 6
 	}
 
-	laMese, err := s.repo.EvolucaoMensal(r.Context(), lnMese)
+	laMese, err := s.dados(r).EvolucaoMensal(r.Context(), lnMese)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return

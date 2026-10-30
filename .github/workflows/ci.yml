@@ -47,13 +47,18 @@ jobs:
       - name: go vet
         run: go vet ./...
 
-      - name: Aplicar migrations
-        run: for f in migrations/*.sql; do echo "$f"; mysql -h 127.0.0.1 -u root -praiz jarvis < "$f"; done
-
       - name: go test (unitarios + integracao)
         env:
-          JARVIS_TEST_DSN: jarvis:jarvis@tcp(127.0.0.1:3306)/jarvis?parseTime=true&charset=utf8mb4&loc=Local
+          JARVIS_TEST_DSN: root:raiz@tcp(127.0.0.1:3306)/jarvis?parseTime=true&charset=utf8mb4&loc=Local
         run: go test -race -count=1 -cover ./...
+
+  imagem:
+    name: Imagem Docker (deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # mesma imagem que o Render constroi: quebrou aqui, quebraria no deploy
+      - run: docker build -t jarvis .
 
   frontend:
     name: Frontend (React)

@@ -39,10 +39,11 @@ func main() {
 	lcHoje := flag.String("hoje", "2026-10-29", "data de hoje para o assistente (a base sintetica vai ate 28/10/2026)")
 	ldPaus := flag.Duration("pausa", 12*time.Second, "pausa entre perguntas: o free tier do gpt-oss-120b aceita 8 mil tokens por minuto")
 	lcSo := flag.String("so", "", "roda so os casos com estes ids, separados por virgula")
+	lnFami := flag.Int64("familia", 1, "familia cuja base sintetica e avaliada")
 	flag.Parse()
 
 	loConf := config.Carregar(".env")
-	if loConf.DSN == "" || loConf.GroqKey == "" {
+	if loConf.DSN == "" || loConf.LLMChave == "" {
 		log.Fatal("MYSQL_DSN e GROQ_API_KEY precisam estar no .env")
 	}
 
@@ -57,13 +58,14 @@ func main() {
 	}
 
 	ctx := context.Background()
-	loRepo, err := armazenamento.Abrir(ctx, loConf.DSN)
+	loBanc, err := armazenamento.Abrir(ctx, loConf.DSN)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer loRepo.Fechar()
+	defer loBanc.Fechar()
+	loRepo := loBanc.Familia(*lnFami)
 
-	loGroq := assistente.NovoGroq(loConf.GroqKey, loConf.GroqModel)
+	loGroq := assistente.NovoCompativel(loConf.LLMURL, loConf.LLMChave, loConf.LLMModelo)
 	loAssi := assistente.Novo(loGroq, loRepo).ComData(ldHoje)
 
 	laExec := make([]execucao, 0, len(laCaso))
@@ -97,7 +99,7 @@ func main() {
 		laExec = append(laExec, loExec)
 	}
 
-	lcMode := loConf.GroqModel
+	lcMode := loConf.LLMModelo
 	if lcMode == "" {
 		lcMode = assistente.ModeloPadrao
 	}
@@ -128,7 +130,7 @@ func lerCasos(pcArqu, pcSo string) ([]avaliacao.Caso, error) {
 }
 
 // gabarito calcula o valor esperado direto no banco, pela mesma consulta do dashboard
-func gabarito(ctx context.Context, poRepo *armazenamento.MySQL, poCaso avaliacao.Caso) (int64, error) {
+func gabarito(ctx context.Context, poRepo *armazenamento.Familia, poCaso avaliacao.Caso) (int64, error) {
 	loResu, err := resumoMes(ctx, poRepo, poCaso.Mes)
 	if err != nil {
 		return 0, err
@@ -158,7 +160,7 @@ func gabarito(ctx context.Context, poRepo *armazenamento.MySQL, poCaso avaliacao
 	return 0, fmt.Errorf("tipo %q sem gabarito", poCaso.Tipo)
 }
 
-func resumoMes(ctx context.Context, poRepo *armazenamento.MySQL, pcMes string) (financas.Resumo, error) {
+func resumoMes(ctx context.Context, poRepo *armazenamento.Familia, pcMes string) (financas.Resumo, error) {
 	ldInic, err := time.ParseInLocation("2006-01", pcMes, time.Local)
 	if err != nil {
 		return financas.Resumo{}, fmt.Errorf("mes %q: %w", pcMes, err)

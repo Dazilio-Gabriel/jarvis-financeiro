@@ -21,7 +21,8 @@
 # Frontend
 node_modules/
 /frontend/dist/
-/backend/internal/web/dist/
+/backend/internal/web/dist/*
+!/backend/internal/web/dist/LEIA.txt
 .vite/
 
 # Editor / SO

@@ -2,62 +2,116 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/assistente"
 )
 
 // Servidor carrega as dependencias que os handlers usam.
 // Handler como metodo evita variavel global e deixa tudo testavel.
 type Servidor struct {
-	repo  *armazenamento.MySQL
-	token string
-	assis perguntador // nil = chat desligado (sem chave do LLM)
+	repo      *armazenamento.MySQL
+	auth      autenticador
+	token     string
+	integFami int64                              // familia dona dos dados que chegam pela integracao (n8n)
+	assis     func(assistente.Fonte) Perguntador // nil = chat desligado (sem chave do LLM)
+	limLogi   *limitador                         // senhas erradas por IP
+	limCada   *limitador                         // cadastros por IP
 }
 
 func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
-	return &Servidor{repo: poRepo, token: pcToke}
+	loServ := &Servidor{repo: poRepo, token: pcToke, integFami: 1,
+		limLogi: novoLimitador(10, 15*time.Minute), limCada: novoLimitador(10, time.Hour)}
+	if poRepo != nil {
+		loServ.auth = poRepo
+	}
+	return loServ
 }
 
-// ComAssistente liga o chat
-func (s *Servidor) ComAssistente(poAssi perguntador) *Servidor {
-	s.assis = poAssi
+// ComAssistente liga o chat. Recebe uma fabrica porque o assistente e montado a cada pergunta
+// com o repositorio da familia de quem perguntou: o modelo nunca escolhe de quem sao os dados.
+func (s *Servidor) ComAssistente(poFabr func(assistente.Fonte) Perguntador) *Servidor {
+	s.assis = poFabr
+	return s
+}
+
+// ComFamiliaIntegracao define de qual familia sao os lancamentos que chegam por token
+func (s *Servidor) ComFamiliaIntegracao(pnFami int64) *Servidor {
+	s.integFami = pnFami
 	return s
 }
 
 func (s *Servidor) Rotas() http.Handler {
 	loMux := http.NewServeMux()
 
+	// publicas
 	loMux.HandleFunc("GET /api/saude", s.saude)
+	loMux.HandleFunc("POST /api/auth/cadastro", s.cadastrar)
+	loMux.HandleFunc("POST /api/auth/login", s.entrar)
+	loMux.HandleFunc("POST /api/auth/sair", s.sair)
 
-	loMux.HandleFunc("GET /api/categorias", s.listarCategorias)
-	loMux.HandleFunc("PUT /api/categorias/{id}/orcamento", s.salvarOrcamento)
+	// so com login: cada handler enxerga apenas a familia de quem esta logado
+	loPriv := http.NewServeMux()
+	loPriv.HandleFunc("GET /api/auth/eu", s.eu)
+	loPriv.HandleFunc("GET /api/familia", s.familia)
 
-	loMux.HandleFunc("GET /api/regras", s.listarRegras)
-	loMux.HandleFunc("POST /api/regras", s.criarRegra)
+	loPriv.HandleFunc("GET /api/categorias", s.listarCategorias)
+	loPriv.HandleFunc("PUT /api/categorias/{id}/orcamento", s.salvarOrcamento)
 
-	loMux.HandleFunc("GET /api/transacoes", s.listarTransacoes)
-	loMux.HandleFunc("POST /api/transacoes", s.criarTransacao)
-	loMux.HandleFunc("PUT /api/transacoes/{id}/categoria", s.categorizarTransacao)
+	loPriv.HandleFunc("GET /api/regras", s.listarRegras)
+	loPriv.HandleFunc("POST /api/regras", s.criarRegra)
 
-	loMux.HandleFunc("GET /api/resumo", s.resumo)
-	loMux.HandleFunc("GET /api/evolucao", s.evolucao)
-	loMux.HandleFunc("GET /api/estatisticas", s.estatisticas)
+	loPriv.HandleFunc("GET /api/transacoes", s.listarTransacoes)
+	loPriv.HandleFunc("POST /api/transacoes", s.criarTransacao)
+	loPriv.HandleFunc("PUT /api/transacoes/{id}/categoria", s.categorizarTransacao)
 
-	loMux.HandleFunc("POST /api/chat", s.chat)
+	loPriv.HandleFunc("GET /api/resumo", s.resumo)
+	loPriv.HandleFunc("GET /api/evolucao", s.evolucao)
+	loPriv.HandleFunc("GET /api/estatisticas", s.estatisticas)
 
-	loMux.HandleFunc("POST /api/importar", s.importar)
-	loMux.HandleFunc("GET /api/importacoes", s.listarImportacoes)
+	loPriv.HandleFunc("POST /api/chat", s.chat)
 
-	// superficie para automacao externa (n8n). Protegida por token.
+	loPriv.HandleFunc("POST /api/importar", s.importar)
+	loPriv.HandleFunc("GET /api/importacoes", s.listarImportacoes)
+
+	loProt := s.exigirLogin(loPriv)
+	for _, lcRota := range []string{"/api/auth/eu", "/api/familia", "/api/categorias", "/api/categorias/",
+		"/api/regras", "/api/transacoes", "/api/transacoes/", "/api/resumo", "/api/evolucao",
+		"/api/estatisticas", "/api/chat", "/api/importar", "/api/importacoes"} {
+		loMux.Handle(lcRota, loProt)
+	}
+
+	// superficie para automacao externa (n8n). Protegida por token, presa a uma familia.
 	loMux.Handle("POST /api/integracao/transacao", s.exigirToken(http.HandlerFunc(s.criarTransacao)))
 	loMux.Handle("GET /api/integracao/resumo", s.exigirToken(http.HandlerFunc(s.resumo)))
 	loMux.Handle("GET /api/integracao/transacoes", s.exigirToken(http.HandlerFunc(s.listarTransacoes)))
 
-	return logar(loMux)
+	// /api desconhecida devolve 404 em JSON; o resto e o frontend (binario unico em producao)
+	loMux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		erroJSON(w, http.StatusNotFound, "rota inexistente")
+	})
+	loMux.Handle("/", frontend())
+
+	return cabecalhosSeguranca(logar(loMux))
+}
+
+// cabecalhosSeguranca: o basico que todo site com dado pessoal deve mandar
+func cabecalhosSeguranca(poProx http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		loCabe := w.Header()
+		loCabe.Set("X-Content-Type-Options", "nosniff")
+		loCabe.Set("X-Frame-Options", "DENY")
+		loCabe.Set("Referrer-Policy", "same-origin")
+		if https(r) {
+			loCabe.Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		poProx.ServeHTTP(w, r)
+	})
 }
 
 // logar registra metodo, caminho, status e duracao de cada requisicao
@@ -81,7 +135,7 @@ func (c *capturaStatus) WriteHeader(pnStat int) {
 	c.ResponseWriter.WriteHeader(pnStat)
 }
 
-// exigirToken barra quem nao mandar o X-API-Token certo
+// exigirToken barra quem nao mandar o X-API-Token certo e prende a requisicao a familia da integracao
 func (s *Servidor) exigirToken(poProx http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.token == "" {
@@ -92,13 +146,16 @@ func (s *Servidor) exigirToken(poProx http.Handler) http.Handler {
 			erroJSON(w, http.StatusUnauthorized, "token invalido")
 			return
 		}
-		poProx.ServeHTTP(w, r)
+		loUsua := armazenamento.Usuario{FamiliaID: s.integFami, Nome: "integração"}
+		poProx.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), chaveUsuario{}, loUsua)))
 	})
 }
 
 func (s *Servidor) saude(w http.ResponseWriter, r *http.Request) {
 	lcBanc := "ok"
-	if err := s.repo.Ping(r.Context()); err != nil {
+	if s.repo == nil {
+		lcBanc = "sem banco"
+	} else if err := s.repo.Ping(r.Context()); err != nil {
 		lcBanc = "erro: " + err.Error()
 	}
 	responderJSON(w, http.StatusOK, map[string]string{"status": "ok", "banco": lcBanc})

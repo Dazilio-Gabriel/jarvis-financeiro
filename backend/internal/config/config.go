@@ -4,16 +4,24 @@ package config
 import (
 	"bufio"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Config struct {
 	Porta     string
 	DSN       string
+	MySQLCA   string // PEM da CA do banco na nuvem, quando o provedor exige (DSN com tls=jarvis)
+	Migrar    bool   // aplica as migrations na subida (producao, com usuario que pode fazer DDL)
 	APIToken  string // protege /api/integracao/* (n8n, automacoes)
+	IntegFami int64  // familia dona do que chega pela integracao
 	ClaudeKey string
-	GroqKey   string
-	GroqModel string
+
+	// LLM: qualquer API compativel com a da OpenAI. Padrao GroqCloud; LLM_* troca de provedor
+	// (Gemini, Cerebras, OpenRouter) sem mexer no codigo. GROQ_* fica por compatibilidade.
+	LLMURL    string
+	LLMChave  string
+	LLMModelo string
 }
 
 // Carregar le o .env (se existir) e monta a config.
@@ -21,13 +29,23 @@ type Config struct {
 func Carregar(pcCami string) Config {
 	carregarEnv(pcCami)
 
+	lnFami, err := strconv.ParseInt(os.Getenv("INTEGRACAO_FAMILIA"), 10, 64)
+	if err != nil || lnFami <= 0 {
+		lnFami = 1
+	}
+
 	return Config{
-		Porta:     ou(os.Getenv("PORTA"), "8080"),
+		// PORT e o nome que Render/Railway/Fly usam; PORTA e o do .env local
+		Porta:     ou(os.Getenv("PORT"), ou(os.Getenv("PORTA"), "8080")),
 		DSN:       os.Getenv("MYSQL_DSN"),
+		MySQLCA:   os.Getenv("MYSQL_CA"),
+		Migrar:    os.Getenv("MIGRAR_NA_SUBIDA") == "1",
 		APIToken:  os.Getenv("API_TOKEN"),
+		IntegFami: lnFami,
 		ClaudeKey: os.Getenv("ANTHROPIC_API_KEY"),
-		GroqKey:   os.Getenv("GROQ_API_KEY"),
-		GroqModel: os.Getenv("GROQ_MODELO"),
+		LLMURL:    os.Getenv("LLM_URL"),
+		LLMChave:  ou(os.Getenv("LLM_CHAVE"), os.Getenv("GROQ_API_KEY")),
+		LLMModelo: ou(os.Getenv("LLM_MODELO"), os.Getenv("GROQ_MODELO")),
 	}
 }
 

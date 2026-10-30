@@ -7,6 +7,8 @@ no WhatsApp.
 Backend em **Go**, frontend em **React + TypeScript**, banco **MySQL**. O projeto também é um
 veículo para aprender Go de verdade.
 
+> **Uso na nuvem (usuários, Render, TiDB, IA grátis):** ver [docs/NUVEM.md](docs/NUVEM.md).
+>
 > **Status:** Fases 0 a 4 funcionando — servidor, domínio, MySQL, importação de CSV, API REST,
 > as telas e o **chat com LLM via tool calling**, com testes, CI e eval. Ver [ROADMAP.md](ROADMAP.md).
 
@@ -133,13 +135,17 @@ o binário Go serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa d
 
 ## API
 
-Todas as respostas são JSON. **Dinheiro trafega em centavos inteiros** (`valor_centavos`), nunca
+Todas as respostas são JSON. Fora `/api/saude` e `/api/auth/*`, toda rota exige login e só
+enxerga os dados da família de quem está logado. **Dinheiro trafega em centavos inteiros** (`valor_centavos`), nunca
 formatado — quem formata é o frontend, com `Intl.NumberFormat`. String formatada no JSON
 impediria ordenar e somar no cliente.
 
 | Método | Rota | O que faz |
 |---|---|---|
-| GET | `/api/saude` | status do servidor e do banco |
+| POST | `/api/auth/cadastro` | cria a conta (`nome`, `email`, `senha`, `convite` opcional) e já entra |
+| POST | `/api/auth/login` · `/api/auth/sair` | abre e fecha a sessão (cookie HttpOnly) |
+| GET | `/api/auth/eu` · `/api/familia` | quem está logado; membros e código de convite |
+| GET | `/api/saude` | status do servidor e do banco (pública) |
 | GET | `/api/resumo` | totais e gasto por categoria (`?de=&ate=`) |
 | GET | `/api/evolucao` | total por mês (`?meses=6`) |
 | GET | `/api/transacoes` | lista com filtro (`?de=&ate=&categoria=&busca=&limite=&offset=`) |

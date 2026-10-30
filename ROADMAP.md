@@ -19,8 +19,8 @@ por trás estiverem certos.
 | **3** | API REST + telas | ✅ pronto |
 | **4** | Chat com LLM via tool calling (Groq, Claude ou local) | ✅ pronto (C2) — testes, CI e eval v1 |
 | **5** | Painel e orçamento refinados | 🟨 parcial — orçamento e gráfico já existem |
-| **6** | `go:embed` + PWA | ⬜ |
-| **7** | Deploy, autenticação, Open Finance | ⬜ |
+| **6** | `go:embed` + PWA | 🟨 binário único com as telas embutidas pronto; PWA falta |
+| **7** | Deploy, autenticação, Open Finance | 🟨 usuários/famílias prontos; Dockerfile + render.yaml prontos ([docs/NUVEM.md](docs/NUVEM.md)); falta criar as contas; Open Finance fora |
 | **8** | WhatsApp | ⬜ |
 
 **Fora do roadmap original, já feito:** superfície `/api/integracao/*` protegida por token,

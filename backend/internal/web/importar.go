@@ -70,7 +70,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 
 	// categoriza pelas regras antes de gravar, para nao precisar de segundo passe
 	lnCateg := 0
-	if laRegr, err := s.repo.ListarRegras(r.Context()); err == nil {
+	if laRegr, err := s.dados(r).ListarRegras(r.Context()); err == nil {
 		lnCateg = importador.NovoCategorizador(laRegr).AplicarEm(laTran)
 	}
 
@@ -95,7 +95,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lnInse, lnDupl, err := s.repo.InserirLote(r.Context(), laTran)
+	lnInse, lnDupl, err := s.dados(r).InserirLote(r.Context(), laTran)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -110,7 +110,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 		Duplicadas:  lnDupl,
 		ComErro:     len(loFont.Erros),
 	}
-	if err := s.repo.RegistrarImportacao(r.Context(), &loImpo); err != nil {
+	if err := s.dados(r).RegistrarImportacao(r.Context(), &loImpo); err != nil {
 		// a importacao ja gravou; falhar o registro de auditoria nao deve desfazer nada
 		erroJSON(w, http.StatusOK, "importado, mas o registro de auditoria falhou: "+err.Error())
 		return
@@ -133,7 +133,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 func (s *Servidor) listarImportacoes(w http.ResponseWriter, r *http.Request) {
 	lnLimi, _ := strconv.Atoi(r.URL.Query().Get("limite"))
 
-	laImpo, err := s.repo.ListarImportacoes(r.Context(), lnLimi)
+	laImpo, err := s.dados(r).ListarImportacoes(r.Context(), lnLimi)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return

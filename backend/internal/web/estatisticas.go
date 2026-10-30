@@ -24,23 +24,24 @@ func (s *Servidor) estatisticas(w http.ResponseWriter, r *http.Request) {
 	}
 	ldFim := ldMes.AddDate(0, 1, -1)
 	ctx := r.Context()
+	loDado := s.dados(r)
 
-	loResu, err := s.repo.Resumo(ctx, ldMes, ldFim)
+	loResu, err := loDado.Resumo(ctx, ldMes, ldFim)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	loAnte, err := s.repo.Resumo(ctx, ldMes.AddDate(0, -1, 0), ldMes.AddDate(0, 0, -1))
+	loAnte, err := loDado.Resumo(ctx, ldMes.AddDate(0, -1, 0), ldMes.AddDate(0, 0, -1))
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	laTran, err := s.repo.Listar(ctx, financas.Filtro{De: ldMes, Ate: ldFim, SemLimite: true})
+	laTran, err := loDado.Listar(ctx, financas.Filtro{De: ldMes, Ate: ldFim, SemLimite: true})
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	laCate, err := s.repo.ListarCategorias(ctx)
+	laCate, err := loDado.ListarCategorias(ctx)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -126,7 +127,7 @@ func (s *Servidor) estatisticas(w http.ResponseWriter, r *http.Request) {
 	laEvol := make([]map[string]any, 0, nMesesEvolucao)
 	for lnIdx := nMesesEvolucao - 1; lnIdx >= 0; lnIdx-- {
 		ldIni := ldMes.AddDate(0, -lnIdx, 0)
-		loMes, err := s.repo.Resumo(ctx, ldIni, ldIni.AddDate(0, 1, -1))
+		loMes, err := loDado.Resumo(ctx, ldIni, ldIni.AddDate(0, 1, -1))
 		if err != nil {
 			erroJSON(w, http.StatusInternalServerError, err.Error())
 			return

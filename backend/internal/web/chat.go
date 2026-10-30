@@ -11,8 +11,8 @@ import (
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/assistente"
 )
 
-// perguntador e o que o handler precisa do assistente; interface para o teste usar um falso
-type perguntador interface {
+// Perguntador e o que o handler precisa do assistente; interface para o teste usar um falso
+type Perguntador interface {
 	Perguntar(ctx context.Context, paHist []assistente.Turno, pcPerg string) (assistente.Resposta, error)
 }
 
@@ -45,7 +45,7 @@ func (s *Servidor) chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ldInic := time.Now()
-	loResp, err := s.assis.Perguntar(r.Context(), loCorp.Historico, lcPerg)
+	loResp, err := s.assis(s.dados(r)).Perguntar(r.Context(), loCorp.Historico, lcPerg)
 	if err != nil {
 		log.Printf("chat: %v", err)
 		erroJSON(w, http.StatusBadGateway, "o assistente nao conseguiu responder agora, tente de novo")

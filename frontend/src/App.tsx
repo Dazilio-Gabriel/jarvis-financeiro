@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { buscarSaude } from './api'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { buscarEu, buscarSaude, sair, type Usuario } from './api'
 import Dashboard from './paginas/Dashboard'
 import Transacoes from './paginas/Transacoes'
 import Importar from './paginas/Importar'
 import Categorias from './paginas/Categorias'
 import Chat from './paginas/Chat'
 import Estatisticas from './paginas/Estatisticas'
+import Entrar from './paginas/Entrar'
+import Familia from './paginas/Familia'
 import './App.css'
 
 type Conexao = 'carregando' | 'ok' | 'erro'
@@ -18,9 +20,51 @@ const MENU = [
   { rota: '/importar', icone: '↧', nome: 'Importar', desc: 'CSV do banco' },
   { rota: '/categorias', icone: '◐', nome: 'Categorias', desc: 'orçamento e regras' },
   { rota: '/chat', icone: '✦', nome: 'Assistente', desc: 'pergunte sobre os gastos' },
+  { rota: '/familia', icone: '◎', nome: 'Família', desc: 'membros e convite' },
 ]
 
+// undefined = ainda conferindo a sessao; null = precisa entrar
 export default function App() {
+  const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined)
+  const navegar = useNavigate()
+
+  useEffect(() => {
+    const controle = new AbortController()
+    buscarEu(controle.signal)
+      .then(setUsuario)
+      .catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setUsuario(null)
+      })
+    const expirou = () => setUsuario(null)
+    window.addEventListener('jarvis:sessao-expirou', expirou)
+    return () => {
+      controle.abort()
+      window.removeEventListener('jarvis:sessao-expirou', expirou)
+    }
+  }, [])
+
+  if (usuario === undefined) {
+    return (
+      <div className="entrar">
+        <span className="dot pulsa" />
+      </div>
+    )
+  }
+  if (usuario === null) {
+    return (
+      <Entrar
+        aoEntrar={(u) => {
+          navegar('/dashboard', { replace: true }) // tira o ?convite= e nao volta para a tela de antes
+          setUsuario(u)
+        }}
+      />
+    )
+  }
+  return <Logado usuario={usuario} aoSair={() => setUsuario(null)} />
+}
+
+function Logado({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }) {
   const [conexao, setConexao] = useState<Conexao>('carregando')
   const [banco, setBanco] = useState('')
   const [menuAberto, setMenuAberto] = useState(false)
@@ -78,6 +122,20 @@ export default function App() {
         </nav>
 
         <div className="menu-rodape">
+          <div className="usuario">
+            <span>
+              <strong>{usuario.nome}</strong>
+              <em>{usuario.familia}</em>
+            </span>
+            <button
+              className="botao pequeno"
+              onClick={() => {
+                sair().finally(aoSair)
+              }}
+            >
+              sair
+            </button>
+          </div>
           <div className={`status ${conexao}`}>
             <span className="dot pulsa" />
             <span>
@@ -116,6 +174,7 @@ export default function App() {
             <Route path="/categorias" element={<Categorias />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/estatisticas" element={<Estatisticas />} />
+            <Route path="/familia" element={<Familia />} />
             <Route path="*" element={<NaoEncontrado />} />
           </Routes>
         </div>

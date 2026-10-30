@@ -1400,6 +1400,122 @@ code {
   white-space: nowrap;
 }
 
+/* ============================================================ LOGIN/FAMÍLIA */
+
+.entrar {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+}
+
+.entrar-caixa {
+  width: 100%;
+  max-width: 400px;
+  gap: 1.1rem;
+}
+
+.entrar-abas {
+  display: flex;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.entrar-abas button {
+  flex: 1;
+  padding: 0.55rem;
+  background: var(--fundo);
+  color: var(--txt-fraco);
+  border: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.entrar-abas button.ativa {
+  background: var(--sup-verde);
+  color: var(--verde);
+}
+
+.entrar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.entrar-form .botao {
+  justify-content: center;
+  padding: 0.65rem;
+}
+
+.entrar-erro {
+  margin: 0;
+  color: var(--vermelho);
+  font-size: 0.85rem;
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.usuario span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.usuario strong,
+.usuario em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usuario em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--txt-fraco);
+}
+
+.convite {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.convite-codigo {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  color: var(--verde);
+  border: 1px solid var(--verde-borda);
+  border-radius: 7px;
+  padding: 0.4rem 0.7rem;
+}
+
+.convite input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  color: var(--txt-fraco);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 0.5rem 0.6rem;
+}
+
 /* ===================================================================== CHAT */
 
 .chat {

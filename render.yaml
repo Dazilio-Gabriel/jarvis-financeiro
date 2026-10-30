@@ -1,0 +1,24 @@
+# Blueprint do Render: no painel, New > Blueprint > escolha este repositorio.
+# Os valores marcados com sync: false o Render pede na hora (nunca ficam no git).
+services:
+  - type: web
+    name: jarvis-financeiro
+    runtime: docker
+    plan: free
+    region: virginia # mesma regiao (us-east-1) do banco no TiDB Cloud: menos latencia por consulta
+    branch: main
+    autoDeploy: true # cada push na main publica sozinho
+    healthCheckPath: /api/saude
+    envVars:
+      - key: MYSQL_DSN
+        sync: false # usuario:senha@tcp(host:4000)/jarvis?parseTime=true&charset=utf8mb4&loc=Local&tls=true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODELO
+        value: openai/gpt-oss-120b
+      - key: MIGRAR_NA_SUBIDA
+        value: "1" # cria/atualiza as tabelas na subida
+      - key: TZ
+        value: America/Sao_Paulo
+      - key: API_TOKEN
+        generateValue: true # token da integracao (n8n), gerado pelo Render

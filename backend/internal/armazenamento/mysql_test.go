@@ -2,14 +2,17 @@ package armazenamento
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/migrations"
 )
 
-// Teste de integracao: roda contra um MySQL de verdade com a migration aplicada.
+// Teste de integracao: roda contra um MySQL de verdade (o schema e aplicado pelo proprio Migrar).
 // Sem JARVIS_TEST_DSN ele e pulado, para o go test local nao depender de banco.
 // Na CI o workflow sobe um MySQL 8.4 e preenche a variavel.
 func abrirTeste(t *testing.T) *MySQL {
@@ -19,18 +22,21 @@ func abrirTeste(t *testing.T) *MySQL {
 		t.Skip("JARVIS_TEST_DSN vazio: teste de integracao pulado")
 	}
 
-	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelar()
 
 	loRepo, err := Abrir(ctx, lcDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := loRepo.Migrar(ctx, migrations.Arquivos); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
-		loRepo.ApagarFonte(context.Background(), "teste")
+		loRepo.Familia(1).ApagarFonte(context.Background(), "teste")
 		loRepo.Fechar()
 	})
-	if _, err := loRepo.ApagarFonte(ctx, "teste"); err != nil {
+	if _, err := loRepo.Familia(1).ApagarFonte(ctx, "teste"); err != nil {
 		t.Fatal(err)
 	}
 	return loRepo
@@ -42,10 +48,10 @@ func dia(pnDia int) time.Time {
 }
 
 func TestIntegracaoLoteResumoEBusca(t *testing.T) {
-	loRepo := abrirTeste(t)
+	loFami := abrirTeste(t).Familia(1)
 	ctx := context.Background()
 
-	laCate, err := loRepo.ListarCategorias(ctx)
+	laCate, err := loFami.ListarCategorias(ctx)
 	if err != nil || len(laCate) == 0 {
 		t.Fatalf("categorias da migration nao encontradas: %v", err)
 	}
@@ -58,7 +64,7 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 		{Data: dia(4), Descricao: "UBER", Valor: -2000, Tipo: financas.Debito, Fonte: "teste"},
 	}
 
-	lnInse, lnDupl, err := loRepo.InserirLote(ctx, laTran)
+	lnInse, lnDupl, err := loFami.InserirLote(ctx, laTran)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +73,7 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 	}
 
 	// reimportar o mesmo lote e o caso real de usuario subindo o extrato duas vezes
-	lnInse, lnDupl, err = loRepo.InserirLote(ctx, laTran)
+	lnInse, lnDupl, err = loFami.InserirLote(ctx, laTran)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +81,7 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 		t.Errorf("reimportacao: %d inseridas, %d duplicadas; esperado 0 e 4", lnInse, lnDupl)
 	}
 
-	loResu, err := loRepo.Resumo(ctx, dia(1), dia(31))
+	loResu, err := loFami.Resumo(ctx, dia(1), dia(31))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +92,7 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 		t.Errorf("por categoria = %+v (esperado a categoria com R$ 56,00 primeiro)", loResu.PorCategoria)
 	}
 
-	laAcha, err := loRepo.Listar(ctx, financas.Filtro{De: dia(1), Ate: dia(31), Busca: "ifood"})
+	laAcha, err := loFami.Listar(ctx, financas.Filtro{De: dia(1), Ate: dia(31), Busca: "ifood"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +101,92 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 	}
 
 	// valor com aspas e % nao pode quebrar o SQL: o filtro vai sempre como parametro
-	if _, err := loRepo.Listar(ctx, financas.Filtro{Busca: `' OR 1=1 -- %`}); err != nil {
+	if _, err := loFami.Listar(ctx, financas.Filtro{Busca: `' OR 1=1 -- %`}); err != nil {
 		t.Errorf("busca com aspas quebrou a consulta: %v", err)
+	}
+}
+
+func TestIntegracaoFamiliasIsoladasESessao(t *testing.T) {
+	loRepo := abrirTeste(t)
+	ctx := context.Background()
+
+	lcMail := fmt.Sprintf("teste-%d@jarvis.local", time.Now().UnixNano())
+
+	// em banco vazio o primeiro cadastro assume a familia 1; o segundo sempre ganha familia nova
+	loPrim, err := loRepo.Cadastrar(ctx, "Primeiro", "p-"+lcMail, "hash-qualquer", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	loUsua, err := loRepo.Cadastrar(ctx, "Teste Isolamento", lcMail, "hash-qualquer", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		for _, loUs := range []Usuario{loPrim, loUsua} {
+			loRepo.db.Exec(`DELETE FROM usuarios WHERE id = ?`, loUs.ID)
+			if loUs.FamiliaID != 1 {
+				loRepo.db.Exec(`DELETE FROM transacoes WHERE familia_id = ?`, loUs.FamiliaID)
+				loRepo.db.Exec(`DELETE FROM regras_categoria WHERE familia_id = ?`, loUs.FamiliaID)
+				loRepo.db.Exec(`DELETE FROM categorias WHERE familia_id = ?`, loUs.FamiliaID)
+				loRepo.db.Exec(`DELETE FROM familias WHERE id = ?`, loUs.FamiliaID)
+			}
+		}
+	})
+	if loUsua.FamiliaID == 1 {
+		t.Fatal("segundo cadastro sem convite caiu na familia 1")
+	}
+
+	// com o convite, entra na familia de quem convidou
+	loConv, err := loRepo.Cadastrar(ctx, "Convidado", "c-"+lcMail, "x", loUsua.Convite)
+	if err != nil || loConv.FamiliaID != loUsua.FamiliaID {
+		t.Errorf("convite: %+v, %v", loConv, err)
+	}
+	t.Cleanup(func() { loRepo.db.Exec(`DELETE FROM usuarios WHERE id = ?`, loConv.ID) })
+
+	if _, err := loRepo.Cadastrar(ctx, "Outro", lcMail, "x", ""); !errors.Is(err, ErrEmailEmUso) {
+		t.Errorf("e-mail repetido: err = %v", err)
+	}
+	if _, err := loRepo.Cadastrar(ctx, "Outro", "x"+lcMail, "x", "NAOEXISTE1"); !errors.Is(err, ErrConviteInvalido) {
+		t.Errorf("convite invalido: err = %v", err)
+	}
+
+	// dado da familia 1 nao pode aparecer para a familia nova, nem por busca, nem no resumo
+	loFam1 := loRepo.Familia(1)
+	loNova := loRepo.Familia(loUsua.FamiliaID)
+	if _, _, err := loFam1.InserirLote(ctx, []financas.Transacao{
+		{Data: dia(5), Descricao: "SEGREDO DA FAMILIA 1", Valor: -9999, Tipo: financas.Debito, Fonte: "teste"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	laAcha, _ := loNova.Listar(ctx, financas.Filtro{Busca: "SEGREDO"})
+	loResu, _ := loNova.Resumo(ctx, dia(1), dia(31))
+	if len(laAcha) != 0 || loResu.Transacoes != 0 {
+		t.Errorf("familia nova enxergou dado da familia 1: %d transacoes, resumo %+v", len(laAcha), loResu)
+	}
+
+	// categoria de outra familia nao pode ser usada nem por id
+	laCat1, _ := loFam1.ListarCategorias(ctx)
+	if _, err := loNova.CriarRegra(ctx, financas.RegraCategoria{Padrao: "X", CategoriaID: laCat1[0].ID}); !errors.Is(err, ErrCategoriaAlheia) {
+		t.Errorf("regra com categoria alheia: err = %v", err)
+	}
+	laCatN, _ := loNova.ListarCategorias(ctx)
+	if len(laCatN) != len(categoriasIniciais) {
+		t.Errorf("familia nova com %d categorias, esperado %d iniciais", len(laCatN), len(categoriasIniciais))
+	}
+
+	// sessao: valida enquanto nao expira, some no logout
+	if err := loRepo.CriarSessao(ctx, loUsua.ID, "h-valida-"+lcMail[:20], time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if loDono, err := loRepo.Sessao(ctx, "h-valida-"+lcMail[:20]); err != nil || loDono.ID != loUsua.ID {
+		t.Errorf("sessao valida: %+v, %v", loDono, err)
+	}
+	loRepo.CriarSessao(ctx, loUsua.ID, "h-vencida-"+lcMail[:20], time.Now().Add(-time.Hour))
+	if _, err := loRepo.Sessao(ctx, "h-vencida-"+lcMail[:20]); !errors.Is(err, ErrSessaoExpirada) {
+		t.Errorf("sessao vencida aceita: %v", err)
+	}
+	loRepo.ApagarSessao(ctx, "h-valida-"+lcMail[:20])
+	if _, err := loRepo.Sessao(ctx, "h-valida-"+lcMail[:20]); !errors.Is(err, ErrSessaoExpirada) {
+		t.Errorf("sessao continuou valida depois do logout: %v", err)
 	}
 }

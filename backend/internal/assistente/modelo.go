@@ -62,13 +62,22 @@ const cURLGroq = "https://api.groq.com/openai/v1/chat/completions"
 const ModeloPadrao = "openai/gpt-oss-120b"
 
 func NovoGroq(pcChav, pcMode string) *Groq {
+	return NovoCompativel("", pcChav, pcMode)
+}
+
+// NovoCompativel fala com qualquer API no formato de chat da OpenAI. URL vazia = GroqCloud.
+// Ex.: Gemini https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+func NovoCompativel(pcURL, pcChav, pcMode string) *Groq {
+	if pcURL == "" {
+		pcURL = cURLGroq
+	}
 	if pcMode == "" {
 		pcMode = ModeloPadrao
 	}
 	return &Groq{
 		chave:  pcChav,
 		modelo: pcMode,
-		url:    cURLGroq,
+		url:    pcURL,
 		http:   &http.Client{Timeout: 60 * time.Second},
 		espera: 2 * time.Second,
 	}
@@ -86,7 +95,7 @@ func (g *Groq) Completar(ctx context.Context, paMens []Mensagem, paFerr []Ferram
 	}
 	// gpt-oss raciocina antes de responder; com esforco alto o raciocinio as vezes vaza
 	// para o texto final ("That's 4 lines. Acceptable..."). Pouco esforco basta: o dado vem da ferramenta.
-	if strings.HasPrefix(g.modelo, "openai/gpt-oss") {
+	if strings.HasPrefix(g.modelo, "openai/gpt-oss") && strings.Contains(g.url, "groq.com") {
 		loCorp["reasoning_effort"] = "low"
 		loCorp["include_reasoning"] = false
 	}

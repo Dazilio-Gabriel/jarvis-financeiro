@@ -66,6 +66,7 @@ var oInje = financas.Transacao{
 
 func main() {
 	llOrca := flag.Bool("orcamentos", false, "grava tambem orcamentos de exemplo (sobrescreve os atuais)")
+	lnFami := flag.Int64("familia", 1, "familia que recebe a base sintetica")
 	flag.Parse()
 
 	loConf := config.Carregar(".env")
@@ -74,11 +75,12 @@ func main() {
 	}
 
 	ctx := context.Background()
-	loRepo, err := armazenamento.Abrir(ctx, loConf.DSN)
+	loBanc, err := armazenamento.Abrir(ctx, loConf.DSN)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer loRepo.Fechar()
+	defer loBanc.Fechar()
+	loRepo := loBanc.Familia(*lnFami)
 
 	laCate, err := loRepo.ListarCategorias(ctx)
 	if err != nil {

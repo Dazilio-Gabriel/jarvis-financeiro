@@ -3,18 +3,51 @@ package armazenamento
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql" // registra o driver "mysql" no database/sql
+	"github.com/go-sql-driver/mysql"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 )
 
 type MySQL struct {
 	db *sql.DB
+}
+
+// Familia e o repositorio ja preso a uma familia. Todo metodo de dado vive aqui, e nao no
+// MySQL: assim nenhuma consulta consegue esquecer o filtro e vazar dado de outra familia.
+type Familia struct {
+	db *sql.DB
+	id int64
+}
+
+// Familia devolve o repositorio da familia informada
+func (m *MySQL) Familia(pnFami int64) *Familia {
+	if m == nil {
+		return nil // so em teste de handler sem banco
+	}
+	return &Familia{db: m.db, id: pnFami}
+}
+
+// ID da familia deste escopo
+func (f *Familia) ID() int64 {
+	return f.id
+}
+
+// RegistrarCA habilita "tls=jarvis" no DSN com a CA do provedor (Aiven e afins mandam um PEM).
+// Provedor com certificado publico (TiDB Cloud) nao precisa: "tls=true" basta.
+func RegistrarCA(pcPEM string) error {
+	loPool := x509.NewCertPool()
+	if !loPool.AppendCertsFromPEM([]byte(pcPEM)) {
+		return errors.New("MYSQL_CA nao contem certificado PEM valido")
+	}
+	return mysql.RegisterTLSConfig("jarvis", &tls.Config{RootCAs: loPool, MinVersion: tls.VersionTLS12})
 }
 
 // Abrir conecta e confere que o banco responde
@@ -27,7 +60,8 @@ func Abrir(ctx context.Context, pcDSN string) (*MySQL, error) {
 	// sql.Open nao conecta de fato — sem esses limites o pool abre conexao sem teto
 	loDB.SetMaxOpenConns(10)
 	loDB.SetMaxIdleConns(5)
-	loDB.SetConnMaxLifetime(time.Hour)
+	// banco gerenciado na nuvem derruba conexao parada; renovar antes evita "bad connection"
+	loDB.SetConnMaxLifetime(4 * time.Minute)
 
 	if err := loDB.PingContext(ctx); err != nil {
 		loDB.Close()
@@ -47,9 +81,9 @@ func (m *MySQL) Ping(ctx context.Context) error {
 
 // ============================================================ CATEGORIAS
 
-func (m *MySQL) ListarCategorias(ctx context.Context) ([]financas.Categoria, error) {
-	loRows, err := m.db.QueryContext(ctx,
-		`SELECT id, nome, orcamento_centavos, cor FROM categorias ORDER BY nome`)
+func (f *Familia) ListarCategorias(ctx context.Context) ([]financas.Categoria, error) {
+	loRows, err := f.db.QueryContext(ctx,
+		`SELECT id, nome, orcamento_centavos, cor FROM categorias WHERE familia_id = ? ORDER BY nome`, f.id)
 	if err != nil {
 		return nil, fmt.Errorf("listar categorias: %w", err)
 	}
@@ -76,13 +110,13 @@ func (m *MySQL) ListarCategorias(ctx context.Context) ([]financas.Categoria, err
 }
 
 // SalvarOrcamento define ou limpa a meta mensal da categoria
-func (m *MySQL) SalvarOrcamento(ctx context.Context, pnCate int64, poOrca *financas.Centavos) error {
+func (f *Familia) SalvarOrcamento(ctx context.Context, pnCate int64, poOrca *financas.Centavos) error {
 	var loValo any
 	if poOrca != nil {
 		loValo = int64(*poOrca)
 	}
-	_, err := m.db.ExecContext(ctx,
-		`UPDATE categorias SET orcamento_centavos = ? WHERE id = ?`, loValo, pnCate)
+	_, err := f.db.ExecContext(ctx,
+		`UPDATE categorias SET orcamento_centavos = ? WHERE id = ? AND familia_id = ?`, loValo, pnCate, f.id)
 	if err != nil {
 		return fmt.Errorf("salvar orcamento: %w", err)
 	}
@@ -91,9 +125,10 @@ func (m *MySQL) SalvarOrcamento(ctx context.Context, pnCate int64, poOrca *finan
 
 // ============================================================ REGRAS
 
-func (m *MySQL) ListarRegras(ctx context.Context) ([]financas.RegraCategoria, error) {
-	loRows, err := m.db.QueryContext(ctx,
-		`SELECT id, padrao, categoria_id, prioridade FROM regras_categoria ORDER BY prioridade DESC, id`)
+func (f *Familia) ListarRegras(ctx context.Context) ([]financas.RegraCategoria, error) {
+	loRows, err := f.db.QueryContext(ctx, `
+		SELECT id, padrao, categoria_id, prioridade FROM regras_categoria
+		WHERE familia_id = ? ORDER BY prioridade DESC, id`, f.id)
 	if err != nil {
 		return nil, fmt.Errorf("listar regras: %w", err)
 	}
@@ -110,12 +145,19 @@ func (m *MySQL) ListarRegras(ctx context.Context) ([]financas.RegraCategoria, er
 	return laRegr, loRows.Err()
 }
 
-func (m *MySQL) CriarRegra(ctx context.Context, poRegr financas.RegraCategoria) (int64, error) {
-	loRes, err := m.db.ExecContext(ctx,
-		`INSERT INTO regras_categoria (padrao, categoria_id, prioridade) VALUES (?, ?, ?)`,
-		poRegr.Padrao, poRegr.CategoriaID, poRegr.Prioridade)
+var ErrCategoriaAlheia = errors.New("categoria nao existe nesta familia")
+
+// CriarRegra so aceita categoria da propria familia (o INSERT...SELECT nao acha a dos outros)
+func (f *Familia) CriarRegra(ctx context.Context, poRegr financas.RegraCategoria) (int64, error) {
+	loRes, err := f.db.ExecContext(ctx, `
+		INSERT INTO regras_categoria (familia_id, padrao, categoria_id, prioridade)
+		SELECT ?, ?, id, ? FROM categorias WHERE id = ? AND familia_id = ?`,
+		f.id, poRegr.Padrao, poRegr.Prioridade, poRegr.CategoriaID, f.id)
 	if err != nil {
 		return 0, fmt.Errorf("criar regra: %w", err)
+	}
+	if lnAfet, _ := loRes.RowsAffected(); lnAfet == 0 {
+		return 0, ErrCategoriaAlheia
 	}
 	return loRes.LastInsertId()
 }
@@ -124,12 +166,12 @@ func (m *MySQL) CriarRegra(ctx context.Context, poRegr financas.RegraCategoria) 
 
 // InserirLote grava as transacoes ignorando as que ja existem pelo hash.
 // Devolve quantas entraram e quantas eram duplicadas.
-func (m *MySQL) InserirLote(ctx context.Context, paTran []financas.Transacao) (int, int, error) {
+func (f *Familia) InserirLote(ctx context.Context, paTran []financas.Transacao) (int, int, error) {
 	if len(paTran) == 0 {
 		return 0, 0, nil
 	}
 
-	loTx, err := m.db.BeginTx(ctx, nil)
+	loTx, err := f.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, 0, fmt.Errorf("abrir transacao: %w", err)
 	}
@@ -138,8 +180,8 @@ func (m *MySQL) InserirLote(ctx context.Context, paTran []financas.Transacao) (i
 	// prepared statement reaproveitado por todo o lote: o banco compila o SQL uma vez so
 	loStmt, err := loTx.PrepareContext(ctx, `
 		INSERT IGNORE INTO transacoes
-			(data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+			(familia_id, data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, 0, fmt.Errorf("preparar insert: %w", err)
 	}
@@ -157,7 +199,7 @@ func (m *MySQL) InserirLote(ctx context.Context, paTran []financas.Transacao) (i
 		}
 
 		loRes, err := loStmt.ExecContext(ctx,
-			loTran.Data, loTran.Referencia(), loTran.Descricao, int64(loTran.Valor), string(loTran.Tipo),
+			f.id, loTran.Data, loTran.Referencia(), loTran.Descricao, int64(loTran.Valor), string(loTran.Tipo),
 			loCate, loTran.Conta, loTran.Pessoa, loTran.Fonte, loTran.HashExterno)
 		if err != nil {
 			return 0, 0, fmt.Errorf("inserir transacao %q: %w", loTran.Descricao, err)
@@ -178,7 +220,7 @@ func (m *MySQL) InserirLote(ctx context.Context, paTran []financas.Transacao) (i
 }
 
 // Inserir grava uma transacao avulsa (lancamento manual)
-func (m *MySQL) Inserir(ctx context.Context, poTran *financas.Transacao) error {
+func (f *Familia) Inserir(ctx context.Context, poTran *financas.Transacao) error {
 	if poTran.HashExterno == "" {
 		poTran.GerarHash()
 	}
@@ -188,11 +230,11 @@ func (m *MySQL) Inserir(ctx context.Context, poTran *financas.Transacao) error {
 		loCate = *poTran.CategoriaID
 	}
 
-	loRes, err := m.db.ExecContext(ctx, `
+	loRes, err := f.db.ExecContext(ctx, `
 		INSERT INTO transacoes
-			(data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		poTran.Data, poTran.Referencia(), poTran.Descricao, int64(poTran.Valor), string(poTran.Tipo),
+			(familia_id, data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		f.id, poTran.Data, poTran.Referencia(), poTran.Descricao, int64(poTran.Valor), string(poTran.Tipo),
 		loCate, poTran.Conta, poTran.Pessoa, poTran.Fonte, poTran.HashExterno)
 	if err != nil {
 		return fmt.Errorf("inserir transacao: %w", err)
@@ -202,8 +244,8 @@ func (m *MySQL) Inserir(ctx context.Context, poTran *financas.Transacao) error {
 	return nil
 }
 
-func (m *MySQL) Listar(ctx context.Context, poFilt financas.Filtro) ([]financas.Transacao, error) {
-	lcSQL, laArgs := montarWhere(poFilt)
+func (f *Familia) Listar(ctx context.Context, poFilt financas.Filtro) ([]financas.Transacao, error) {
+	lcSQL, laArgs := f.montarWhere(poFilt)
 
 	lcSQL = `SELECT id, data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa,
 	                fonte, hash_externo, criado_em
@@ -219,7 +261,7 @@ func (m *MySQL) Listar(ctx context.Context, poFilt financas.Filtro) ([]financas.
 		laArgs = append(laArgs, lnLimi, poFilt.Offset)
 	}
 
-	loRows, err := m.db.QueryContext(ctx, lcSQL, laArgs...)
+	loRows, err := f.db.QueryContext(ctx, lcSQL, laArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("listar transacoes: %w", err)
 	}
@@ -254,11 +296,11 @@ func (m *MySQL) Listar(ctx context.Context, poFilt financas.Filtro) ([]financas.
 	return laTran, loRows.Err()
 }
 
-func (m *MySQL) Contar(ctx context.Context, poFilt financas.Filtro) (int, error) {
-	lcWher, laArgs := montarWhere(poFilt)
+func (f *Familia) Contar(ctx context.Context, poFilt financas.Filtro) (int, error) {
+	lcWher, laArgs := f.montarWhere(poFilt)
 
 	var lnTota int
-	err := m.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM transacoes`+lcWher, laArgs...).Scan(&lnTota)
+	err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM transacoes`+lcWher, laArgs...).Scan(&lnTota)
 	if err != nil {
 		return 0, fmt.Errorf("contar transacoes: %w", err)
 	}
@@ -266,33 +308,37 @@ func (m *MySQL) Contar(ctx context.Context, poFilt financas.Filtro) (int, error)
 }
 
 // ApagarFonte remove as transacoes de uma origem; usado para recriar a base sintetica
-func (m *MySQL) ApagarFonte(ctx context.Context, pcFont string) (int64, error) {
-	loRes, err := m.db.ExecContext(ctx, `DELETE FROM transacoes WHERE fonte = ?`, pcFont)
+func (f *Familia) ApagarFonte(ctx context.Context, pcFont string) (int64, error) {
+	loRes, err := f.db.ExecContext(ctx,
+		`DELETE FROM transacoes WHERE fonte = ? AND familia_id = ?`, pcFont, f.id)
 	if err != nil {
 		return 0, fmt.Errorf("apagar fonte %q: %w", pcFont, err)
 	}
 	return loRes.RowsAffected()
 }
 
-// Categorizar aplica uma categoria a uma transacao
-func (m *MySQL) Categorizar(ctx context.Context, pnTran int64, poCate *int64) error {
+// Categorizar aplica uma categoria a uma transacao. Transacao e categoria tem que ser da familia.
+func (f *Familia) Categorizar(ctx context.Context, pnTran int64, poCate *int64) error {
 	var loValo any
 	if poCate != nil {
 		loValo = *poCate
 	}
-	_, err := m.db.ExecContext(ctx,
-		`UPDATE transacoes SET categoria_id = ? WHERE id = ?`, loValo, pnTran)
+	_, err := f.db.ExecContext(ctx, `
+		UPDATE transacoes SET categoria_id = ?
+		WHERE id = ? AND familia_id = ?
+		  AND (? IS NULL OR EXISTS (SELECT 1 FROM categorias WHERE id = ? AND familia_id = ?))`,
+		loValo, pnTran, f.id, loValo, loValo, f.id)
 	if err != nil {
 		return fmt.Errorf("categorizar: %w", err)
 	}
 	return nil
 }
 
-// montarWhere devolve o WHERE e os argumentos.
+// montarWhere devolve o WHERE e os argumentos, sempre com a familia primeiro.
 // Os valores vao sempre como ? — concatenar valor no SQL e como se abre SQL injection.
-func montarWhere(poFilt financas.Filtro) (string, []any) {
-	laCond := []string{}
-	laArgs := []any{}
+func (f *Familia) montarWhere(poFilt financas.Filtro) (string, []any) {
+	laCond := []string{"familia_id = ?"}
+	laArgs := []any{f.id}
 
 	lcColu := colunaPeriodo(poFilt.De, poFilt.Ate)
 	if !poFilt.De.IsZero() {
@@ -324,9 +370,6 @@ func montarWhere(poFilt financas.Filtro) (string, []any) {
 		laArgs = append(laArgs, "%"+poFilt.Busca+"%")
 	}
 
-	if len(laCond) == 0 {
-		return "", laArgs
-	}
 	return " WHERE " + strings.Join(laCond, " AND "), laArgs
 }
 
@@ -344,23 +387,24 @@ func colunaPeriodo(pdDe, pdAte time.Time) string {
 
 // ============================================================ RESUMO
 
-func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Resumo, error) {
+func (f *Familia) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Resumo, error) {
 	loResu := financas.Resumo{De: pdDe, Ate: pdAte, PorCategoria: []financas.ResumoCategoria{}}
+	lcColu := colunaPeriodo(pdDe, pdAte)
 
 	// totais: SUM condicional evita duas consultas
-	err := m.db.QueryRowContext(ctx, `
+	err := f.db.QueryRowContext(ctx, `
 		SELECT
 			COALESCE(SUM(CASE WHEN tipo = 'credito' THEN valor_centavos ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN tipo = 'debito'  THEN ABS(valor_centavos) ELSE 0 END), 0),
 			COUNT(*)
-		FROM transacoes WHERE `+colunaPeriodo(pdDe, pdAte)+` >= ? AND `+colunaPeriodo(pdDe, pdAte)+` <= ?`, pdDe, pdAte).
+		FROM transacoes WHERE familia_id = ? AND `+lcColu+` >= ? AND `+lcColu+` <= ?`, f.id, pdDe, pdAte).
 		Scan(&loResu.Entradas, &loResu.Saidas, &loResu.Transacoes)
 	if err != nil {
 		return loResu, fmt.Errorf("resumo totais: %w", err)
 	}
 	loResu.Saldo = loResu.Entradas - loResu.Saidas
 
-	loRows, err := m.db.QueryContext(ctx, `
+	loRows, err := f.db.QueryContext(ctx, `
 		SELECT t.categoria_id,
 		       COALESCE(c.nome, 'Sem categoria'),
 		       COALESCE(c.cor, '#6f8279'),
@@ -369,9 +413,9 @@ func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Res
 		       COUNT(*)
 		FROM transacoes t
 		LEFT JOIN categorias c ON c.id = t.categoria_id
-		WHERE t.`+colunaPeriodo(pdDe, pdAte)+` >= ? AND t.`+colunaPeriodo(pdDe, pdAte)+` <= ? AND t.tipo = 'debito'
+		WHERE t.familia_id = ? AND t.`+lcColu+` >= ? AND t.`+lcColu+` <= ? AND t.tipo = 'debito'
 		GROUP BY t.categoria_id, c.nome, c.cor, c.orcamento_centavos
-		ORDER BY SUM(ABS(t.valor_centavos)) DESC`, pdDe, pdAte)
+		ORDER BY SUM(ABS(t.valor_centavos)) DESC`, f.id, pdDe, pdAte)
 	if err != nil {
 		return loResu, fmt.Errorf("resumo por categoria: %w", err)
 	}
@@ -402,15 +446,15 @@ func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Res
 }
 
 // EvolucaoMensal devolve o total de saidas por mes nos ultimos pnMese meses
-func (m *MySQL) EvolucaoMensal(ctx context.Context, pnMese int) ([]financas.ResumoCategoria, error) {
-	loRows, err := m.db.QueryContext(ctx, `
+func (f *Familia) EvolucaoMensal(ctx context.Context, pnMese int) ([]financas.ResumoCategoria, error) {
+	loRows, err := f.db.QueryContext(ctx, `
 		SELECT DATE_FORMAT(mes_ref, '%m/%Y'),
 		       SUM(CASE WHEN tipo = 'debito' THEN ABS(valor_centavos) ELSE 0 END),
 		       COUNT(*)
 		FROM transacoes
-		WHERE mes_ref >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
+		WHERE familia_id = ? AND mes_ref >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
 		GROUP BY mes_ref
-		ORDER BY mes_ref`, pnMese)
+		ORDER BY mes_ref`, f.id, pnMese)
 	if err != nil {
 		return nil, fmt.Errorf("evolucao mensal: %w", err)
 	}
@@ -433,11 +477,11 @@ func (m *MySQL) EvolucaoMensal(ctx context.Context, pnMese int) ([]financas.Resu
 
 // ============================================================ IMPORTACOES
 
-func (m *MySQL) RegistrarImportacao(ctx context.Context, poImpo *financas.Importacao) error {
-	loRes, err := m.db.ExecContext(ctx, `
-		INSERT INTO importacoes (arquivo, fonte, conta, total_linhas, importadas, duplicadas, com_erro)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		poImpo.Arquivo, poImpo.Fonte, poImpo.Conta,
+func (f *Familia) RegistrarImportacao(ctx context.Context, poImpo *financas.Importacao) error {
+	loRes, err := f.db.ExecContext(ctx, `
+		INSERT INTO importacoes (familia_id, arquivo, fonte, conta, total_linhas, importadas, duplicadas, com_erro)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		f.id, poImpo.Arquivo, poImpo.Fonte, poImpo.Conta,
 		poImpo.TotalLinhas, poImpo.Importadas, poImpo.Duplicadas, poImpo.ComErro)
 	if err != nil {
 		return fmt.Errorf("registrar importacao: %w", err)
@@ -446,14 +490,14 @@ func (m *MySQL) RegistrarImportacao(ctx context.Context, poImpo *financas.Import
 	return nil
 }
 
-func (m *MySQL) ListarImportacoes(ctx context.Context, pnLimi int) ([]financas.Importacao, error) {
+func (f *Familia) ListarImportacoes(ctx context.Context, pnLimi int) ([]financas.Importacao, error) {
 	if pnLimi <= 0 {
 		pnLimi = 20
 	}
 
-	loRows, err := m.db.QueryContext(ctx, `
+	loRows, err := f.db.QueryContext(ctx, `
 		SELECT id, arquivo, fonte, COALESCE(conta, ''), total_linhas, importadas, duplicadas, com_erro, criado_em
-		FROM importacoes ORDER BY criado_em DESC LIMIT ?`, pnLimi)
+		FROM importacoes WHERE familia_id = ? ORDER BY criado_em DESC LIMIT ?`, f.id, pnLimi)
 	if err != nil {
 		return nil, fmt.Errorf("listar importacoes: %w", err)
 	}

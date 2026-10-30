@@ -46,13 +46,13 @@ func (s *Servidor) listarTransacoes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	laTran, err := s.repo.Listar(r.Context(), loFilt)
+	laTran, err := s.dados(r).Listar(r.Context(), loFilt)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	lnTota, err := s.repo.Contar(r.Context(), loFilt)
+	lnTota, err := s.dados(r).Contar(r.Context(), loFilt)
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
@@ -200,7 +200,7 @@ func (s *Servidor) criarTransacao(w http.ResponseWriter, r *http.Request) {
 
 	// sem categoria explicita, tenta as regras
 	if loTran.CategoriaID == nil {
-		if laRegr, err := s.repo.ListarRegras(r.Context()); err == nil {
+		if laRegr, err := s.dados(r).ListarRegras(r.Context()); err == nil {
 			for _, loRegr := range laRegr {
 				if loRegr.Casa(loTran.Descricao) {
 					lnCate := loRegr.CategoriaID
@@ -211,7 +211,7 @@ func (s *Servidor) criarTransacao(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := s.repo.Inserir(r.Context(), &loTran); err != nil {
+	if err := s.dados(r).Inserir(r.Context(), &loTran); err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -234,7 +234,7 @@ func (s *Servidor) categorizarTransacao(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := s.repo.Categorizar(r.Context(), lnTran, loCorp.CategoriaID); err != nil {
+	if err := s.dados(r).Categorizar(r.Context(), lnTran, loCorp.CategoriaID); err != nil {
 		erroJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}

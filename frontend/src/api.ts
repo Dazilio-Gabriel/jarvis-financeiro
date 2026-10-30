@@ -94,6 +94,11 @@ async function pedir<T>(caminho: string, init?: RequestInit): Promise<T> {
     headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
   })
 
+  // sessao expirou ou nao existe: o App escuta e volta para a tela de login
+  if (res.status === 401 && !caminho.startsWith('/api/auth/')) {
+    window.dispatchEvent(new Event('jarvis:sessao-expirou'))
+  }
+
   if (!res.ok) {
     let detalhe = `${res.status}`
     try {
@@ -239,3 +244,29 @@ export type Estatisticas = {
 
 export const buscarEstatisticas = (mes: string, sinal?: AbortSignal) =>
   pedir<Estatisticas>(`/api/estatisticas?mes=${mes}`, { signal: sinal })
+
+export type Usuario = { id: number; nome: string; email: string; familia: string; convite?: string }
+
+export type Familia = {
+  nome: string
+  convite: string
+  membros: { id: number; nome: string; email: string }[]
+}
+
+const postarJSON = <T,>(caminho: string, corpo: unknown) =>
+  pedir<T>(caminho, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo),
+  })
+
+export const buscarEu = (sinal?: AbortSignal) => pedir<Usuario>('/api/auth/eu', { signal: sinal })
+
+export const entrar = (email: string, senha: string) => postarJSON<Usuario>('/api/auth/login', { email, senha })
+
+export const cadastrar = (dados: { nome: string; email: string; senha: string; convite?: string }) =>
+  postarJSON<Usuario>('/api/auth/cadastro', dados)
+
+export const sair = () => postarJSON<{ ok: boolean }>('/api/auth/sair', {})
+
+export const buscarFamilia = (sinal?: AbortSignal) => pedir<Familia>('/api/familia', { signal: sinal })

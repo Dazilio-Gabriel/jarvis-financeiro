@@ -8,11 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // fuso embutido: "este mes" nao vira o mes errado num servidor em UTC
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/assistente"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/config"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/web"
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/migrations"
 )
 
 func main() {
@@ -26,7 +28,13 @@ func main() {
 	ctx, cancelar := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancelar()
 
-	ctxConn, cancelarConn := context.WithTimeout(ctx, 10*time.Second)
+	if loConf.MySQLCA != "" {
+		if err := armazenamento.RegistrarCA(loConf.MySQLCA); err != nil {
+			log.Fatalf("MYSQL_CA: %v", err)
+		}
+	}
+
+	ctxConn, cancelarConn := context.WithTimeout(ctx, 30*time.Second) // banco na nuvem acorda devagar
 	defer cancelarConn()
 
 	loRepo, err := armazenamento.Abrir(ctxConn, loConf.DSN)
@@ -35,12 +43,24 @@ func main() {
 	}
 	defer loRepo.Fechar()
 
-	loWeb := web.NovoServidor(loRepo, loConf.APIToken)
-	if loConf.GroqKey != "" {
-		loWeb.ComAssistente(assistente.Novo(assistente.NovoGroq(loConf.GroqKey, loConf.GroqModel), loRepo))
-		log.Println("assistente ligado (GroqCloud)")
+	if loConf.Migrar {
+		laApli, err := loRepo.Migrar(ctxConn, migrations.Arquivos)
+		if err != nil {
+			log.Fatalf("migrations: %v", err)
+		}
+		log.Printf("migrations aplicadas agora: %v", laApli)
+	}
+
+	loWeb := web.NovoServidor(loRepo, loConf.APIToken).ComFamiliaIntegracao(loConf.IntegFami)
+	if loConf.LLMChave != "" {
+		loMode := assistente.NovoCompativel(loConf.LLMURL, loConf.LLMChave, loConf.LLMModelo)
+		// um assistente por pergunta, preso a familia de quem perguntou
+		loWeb.ComAssistente(func(poFont assistente.Fonte) web.Perguntador {
+			return assistente.Novo(loMode, poFont)
+		})
+		log.Println("assistente ligado")
 	} else {
-		log.Println("GROQ_API_KEY vazio: chat desligado, o resto funciona normal")
+		log.Println("GROQ_API_KEY/LLM_CHAVE vazio: chat desligado, o resto funciona normal")
 	}
 
 	loServ := &http.Server{

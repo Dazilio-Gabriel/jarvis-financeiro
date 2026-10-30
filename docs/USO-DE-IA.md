@@ -153,3 +153,32 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
     `scripts/rodar-tudo.ps1` faz tudo num comando.
 - **Revisão humana:** _(preencher: conferir os totais das faturas de novembro e dezembro contra o
   app do Nubank)._
+
+### 2026-10-30 — Usuários, famílias e preparação para a nuvem
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5)
+- **Tarefa:** login e dados por família, hospedagem com acesso de qualquer lugar, banco na nuvem e
+  opções de IA gratuita.
+- **Prompt (literal):**
+  > blz,sobe tudo legal pro github pf, jaja vou postar o video no youtube ai atualizo o readme,
+  > vamos focar agora em como fazer a questao de usuarios, deixar o site hospedado para acessar de
+  > qualquer lugar sem ser so na minha maquina e apos isso vamos fazer o banco em nunvem tbm, pq ai
+  > quero acessar e realmente usar essa poha no dia a dia, btf? teria alguma AI que tenha API de
+  > graca para eu conseguir usar tranquilo a funcionalidade de AI dele? tipo o lhama, faça tipo em
+  > topicos oq precisamos fazer e vamos fazendo com calma, em seguida, tome as melhores decisoes e
+  > as que fazem mais sentido, so faça pq vou comprar algo ali pra beber e qnd voltar eu vou
+  > analisar oq vc fez, nao pergunte nada durante esse prompt, apenas faça com base no que faz mais
+  > sentido
+- **Resultado:** migration 003 (famílias, usuários, sessões, `familia_id` em todos os dados);
+  repositório reestruturado em `armazenamento.Familia` (toda consulta presa à família); cadastro,
+  login, logout, convite, bcrypt, cookie HttpOnly/SameSite/Secure, limite de tentativas; chat
+  montado por família (o modelo não alcança outra família); telas de login e de família;
+  migrations embutidas e aplicadas na subida; frontend embutido no binário Go; `Dockerfile`,
+  `render.yaml`, fuso de Brasília embutido; provedor de IA configurável (`LLM_URL`);
+  [`docs/NUVEM.md`](NUVEM.md) com plano, decisões e passo a passo (TiDB Cloud + Render + Groq).
+  Testes: isolamento entre famílias, sessão, cadastro/login/limite, e teste ponta a ponta no
+  navegador (dono, estranho sem convite, convidado pelo link). Defeitos achados no caminho: o
+  limite de tentativas bloqueava login certo; a tela voltava para a página anterior depois do
+  login; o servidor de arquivos listava pastas — todos corrigidos.
+- **Revisão humana:** _(preencher: cadastro feito primeiro pelo autor em cada banco; deploy no
+  Render/TiDB conferido)._

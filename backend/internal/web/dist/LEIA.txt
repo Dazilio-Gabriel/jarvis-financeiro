@@ -1,0 +1,2 @@
+O build do frontend (npm run build) e copiado para esta pasta pelo Dockerfile.
+Em desenvolvimento ela fica vazia e o Vite serve as telas.
