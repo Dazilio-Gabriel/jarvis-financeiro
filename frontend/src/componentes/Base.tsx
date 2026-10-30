@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { definirVisaoMes, visaoMes, type VisaoMes } from '../api'
 import { fmtBRL, rotuloMes, somarMes, useContador } from '../util'
 
 /** Cabecalho de pagina, com titulo grande e rotulo mono em cima. */
@@ -159,6 +160,28 @@ export function SeletorMes({ mes, aoMudar }: { mes: string; aoMudar: (mes: strin
       <span>{rotuloMes(`${mes}-01`)}</span>
       <button className="botao pequeno" onClick={() => aoMudar(somarMes(mes, 1))} aria-label="próximo mês">
         ›
+      </button>
+    </div>
+  )
+}
+
+/** compra | fatura: a mesma escolha vale para o site todo (vai em toda requisicao). */
+export function SeletorVisao({ aoMudar }: { aoMudar: (v: VisaoMes) => void }) {
+  const [visao, setVisao] = useState<VisaoMes>(visaoMes())
+  const trocar = (v: VisaoMes) => {
+    definirVisaoMes(v)
+    setVisao(v)
+    aoMudar(v)
+  }
+  return (
+    <div className="seletor-visao" role="group" aria-label="contar o mês por">
+      <button className={visao === 'compra' ? 'ativa' : ''} onClick={() => trocar('compra')}
+        title="o mês em que você comprou (ex.: tudo o que gastou em outubro)">
+        mês da compra
+      </button>
+      <button className={visao === 'fatura' ? 'ativa' : ''} onClick={() => trocar('fatura')}
+        title="o mês em que a fatura é paga (ex.: a fatura que fecha em novembro)">
+        mês da fatura
       </button>
     </div>
   )

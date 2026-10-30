@@ -23,8 +23,21 @@ type MySQL struct {
 // Familia e o repositorio ja preso a uma familia. Todo metodo de dado vive aqui, e nao no
 // MySQL: assim nenhuma consulta consegue esquecer o filtro e vazar dado de outra familia.
 type Familia struct {
-	db *sql.DB
-	id int64
+	db       *sql.DB
+	id       int64
+	porCompr bool // mes = mes da compra (data); senao, mes da fatura (mes_ref)
+}
+
+// PorCompra devolve o mesmo escopo contando o mes pela data da compra, e nao pela fatura.
+// A fatura de novembro (fecha 08/11) e o que se gastou em outubro: para orcamento e habito, o
+// mes que importa e o da compra; para saber quanto se paga no mes, o da fatura.
+func (f *Familia) PorCompra() *Familia {
+	if f == nil {
+		return nil
+	}
+	loCopi := *f
+	loCopi.porCompr = true
+	return &loCopi
 }
 
 // Familia devolve o repositorio da familia informada
@@ -386,7 +399,7 @@ func (f *Familia) montarWhere(poFilt financas.Filtro) (string, []any) {
 	laCond := []string{"familia_id = ?"}
 	laArgs := []any{f.id}
 
-	lcColu := colunaPeriodo(poFilt.De, poFilt.Ate)
+	lcColu := f.colunaPeriodo(poFilt.De, poFilt.Ate)
 	if !poFilt.De.IsZero() {
 		laCond = append(laCond, lcColu+" >= ?")
 		laArgs = append(laArgs, poFilt.De)
@@ -423,9 +436,10 @@ func (f *Familia) montarWhere(poFilt financas.Filtro) (string, []any) {
 }
 
 // colunaPeriodo: periodo de meses inteiros filtra pelo mes de referencia (a fatura de novembro
-// conta em novembro); periodo quebrado ("de 05 a 20/10") filtra pela data da compra.
-func colunaPeriodo(pdDe, pdAte time.Time) string {
-	if pdDe.IsZero() || pdAte.IsZero() {
+// conta em novembro), a nao ser na visao por compra; periodo quebrado ("de 05 a 20/10") filtra
+// sempre pela data da compra.
+func (f *Familia) colunaPeriodo(pdDe, pdAte time.Time) string {
+	if pdDe.IsZero() || pdAte.IsZero() || f.porCompr {
 		return "data"
 	}
 	if pdDe.Day() == 1 && pdAte.AddDate(0, 0, 1).Day() == 1 {
@@ -438,7 +452,7 @@ func colunaPeriodo(pdDe, pdAte time.Time) string {
 
 func (f *Familia) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Resumo, error) {
 	loResu := financas.Resumo{De: pdDe, Ate: pdAte, PorCategoria: []financas.ResumoCategoria{}}
-	lcColu := colunaPeriodo(pdDe, pdAte)
+	lcColu := f.colunaPeriodo(pdDe, pdAte)
 
 	// totais: SUM condicional evita duas consultas
 	err := f.db.QueryRowContext(ctx, `
@@ -496,14 +510,18 @@ func (f *Familia) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.R
 
 // EvolucaoMensal devolve o total de saidas por mes nos ultimos pnMese meses
 func (f *Familia) EvolucaoMensal(ctx context.Context, pnMese int) ([]financas.ResumoCategoria, error) {
+	lcMes := "mes_ref"
+	if f.porCompr {
+		lcMes = "DATE_FORMAT(data, '%Y-%m-01')"
+	}
 	loRows, err := f.db.QueryContext(ctx, `
-		SELECT DATE_FORMAT(mes_ref, '%m/%Y'),
+		SELECT DATE_FORMAT(`+lcMes+`, '%m/%Y'),
 		       SUM(CASE WHEN tipo = 'debito' THEN ABS(valor_centavos) ELSE 0 END),
 		       COUNT(*)
 		FROM transacoes
-		WHERE familia_id = ? AND mes_ref >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
-		GROUP BY mes_ref
-		ORDER BY mes_ref`, f.id, pnMese)
+		WHERE familia_id = ? AND `+lcMes+` >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
+		GROUP BY `+lcMes+`
+		ORDER BY `+lcMes, f.id, pnMese)
 	if err != nil {
 		return nil, fmt.Errorf("evolucao mensal: %w", err)
 	}

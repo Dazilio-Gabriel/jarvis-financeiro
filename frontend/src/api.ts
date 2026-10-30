@@ -88,10 +88,30 @@ export class ErroAPI extends Error {
 
 // fetch NAO lanca erro em 404 ou 500 — sem o if abaixo, resposta de erro
 // seguiria adiante como se fosse dado valido
+export type VisaoMes = 'compra' | 'fatura'
+
+/** "compra": o mes e o da compra; "fatura": o mes em que a fatura e paga. Fica no navegador. */
+export function visaoMes(): VisaoMes {
+  try {
+    return localStorage.getItem('jarvis:visao-mes') === 'fatura' ? 'fatura' : 'compra'
+  } catch {
+    return 'compra'
+  }
+}
+
+export function definirVisaoMes(v: VisaoMes) {
+  try {
+    localStorage.setItem('jarvis:visao-mes', v)
+  } catch {
+    // navegador sem storage: a escolha vale so ate recarregar
+  }
+  window.dispatchEvent(new Event('jarvis:visao-mes'))
+}
+
 async function pedir<T>(caminho: string, init?: RequestInit): Promise<T> {
   const res = await fetch(caminho, {
     ...init,
-    headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
+    headers: { Accept: 'application/json', 'X-Visao-Mes': visaoMes(), ...(init?.headers ?? {}) },
   })
 
   // sessao expirou ou nao existe: o App escuta e volta para a tela de login

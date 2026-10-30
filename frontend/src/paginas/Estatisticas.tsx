@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { buscarEstatisticas, type Estatisticas as Dados } from '../api'
-import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, Vazio } from '../componentes/Base'
+import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, SeletorVisao, Vazio } from '../componentes/Base'
 import { fmtBRL, linkCategoria, mesAtual, NOMES_MES, rotuloMes, useBusca } from '../util'
 
 const curtoMes = (mes: string) => {
@@ -55,7 +55,8 @@ function Rosca({ fatias, total }: { fatias: { nome: string; cor: string; valor: 
 
 export default function Estatisticas() {
   const [mes, setMes] = useState(mesAtual())
-  const [estado, recarregar] = useBusca((s) => buscarEstatisticas(mes, s), [mes])
+  const [visao, setVisao] = useState('')
+  const [estado, recarregar] = useBusca((s) => buscarEstatisticas(mes, s), [mes, visao])
 
   const cabecalho = (
     <Cabecalho
@@ -65,8 +66,13 @@ export default function Estatisticas() {
           para onde foi <em>o dinheiro</em>
         </>
       }
-      sub="na fatura do cartão, as compras contam no mês da fatura"
-      acao={<SeletorMes mes={mes} aoMudar={setMes} />}
+      sub="mês da compra: quando você gastou · mês da fatura: quando você paga"
+      acao={
+        <>
+          <SeletorVisao aoMudar={setVisao} />
+          <SeletorMes mes={mes} aoMudar={setMes} />
+        </>
+      }
     />
   )
 

@@ -255,3 +255,14 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   paleta de 12 cores validada com o script do dataviz (daltonismo, distância entre vizinhas,
   contraste no fundo escuro), migration 005, cor livre escolhida pelo servidor para categoria nova.
 - **Revisão humana:** _(preencher)_
+
+### 2026-10-30 — Ver por mês da compra ou mês da fatura
+- **Quem:** Gabriel Dazilio Fanchiotti · **Ferramenta:** Claude Code (Claude Opus 5.5)
+- **Prompt (literal):**
+  > sabe o valor que estava ali referente ao mes 11, seria os meus gastos do mes 10, pq o cartao é
+  > do mes 11 q fecha agora dia 08/11 mas foi tudo oq gastei no mes 10, sera que tem alguma sujestao sobre?
+
+  > pode fazer a sujestao do r "ver por: compra | fatura" suba e me avisa que vou olhar, vlw!
+- **Resultado:** seletor "mês da compra | mês da fatura" no Dashboard e nas Estatísticas; a escolha
+  vai em toda requisição (`X-Visao-Mes`) e vale também para Transações e para o chat; padrão
+  "mês da compra". Nenhuma reimportação: o banco já guardava a data da compra e o mês da fatura.

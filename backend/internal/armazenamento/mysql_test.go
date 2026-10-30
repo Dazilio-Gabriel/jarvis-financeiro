@@ -101,6 +101,21 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 		t.Errorf("busca ifood = %+v (esperado 2, mais recente primeiro)", laAcha)
 	}
 
+	// compra de outubro na fatura de novembro: conta em novembro por fatura, em outubro por compra
+	ldOutu := time.Date(1998, 10, 20, 0, 0, 0, 0, time.Local)
+	ldNove := time.Date(1998, 11, 1, 0, 0, 0, 0, time.Local)
+	if _, _, err := loFami.InserirLote(ctx, []financas.Transacao{
+		{Data: ldOutu, MesRef: ldNove, Descricao: "FATURA", Valor: -1234, Tipo: financas.Debito, Fonte: "teste"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	loFatu, _ := loFami.Resumo(ctx, ldNove, ldNove.AddDate(0, 1, -1))
+	loComp, _ := loFami.PorCompra().Resumo(ctx, ldNove, ldNove.AddDate(0, 1, -1))
+	loCoOu, _ := loFami.PorCompra().Resumo(ctx, ldOutu.AddDate(0, 0, -19), ldNove.AddDate(0, 0, -1))
+	if loFatu.Saidas != 1234 || loComp.Saidas != 0 || loCoOu.Saidas != 1234 {
+		t.Errorf("visao fatura nov = %d, compra nov = %d, compra out = %d", loFatu.Saidas, loComp.Saidas, loCoOu.Saidas)
+	}
+
 	// SQL injection classico em todo campo de texto que vai ao banco: tudo vai como parametro (?),
 	// entao o banco trata como texto. A tabela tem que continuar la e a busca nao pode trazer tudo.
 	for _, lcAtaq := range []string{

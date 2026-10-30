@@ -52,7 +52,12 @@ func usuarioDe(r *http.Request) armazenamento.Usuario {
 
 // dados e o repositorio preso a familia de quem esta logado: handler nenhum ve outra familia
 func (s *Servidor) dados(r *http.Request) *armazenamento.Familia {
-	return s.repo.Familia(usuarioDe(r).FamiliaID)
+	loFami := s.repo.Familia(usuarioDe(r).FamiliaID)
+	// a tela manda a visao escolhida em toda requisicao; sem o cabecalho, mes da fatura
+	if r.Header.Get("X-Visao-Mes") == "compra" {
+		return loFami.PorCompra()
+	}
+	return loFami
 }
 
 func hashToken(pcToke string) string {

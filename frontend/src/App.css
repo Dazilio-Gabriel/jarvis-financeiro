@@ -1688,6 +1688,30 @@ code {
   margin-top: 0.3rem !important;
 }
 
+.seletor-visao {
+  display: inline-flex;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seletor-visao button {
+  background: var(--fundo);
+  color: var(--txt-fraco);
+  border: 0;
+  padding: 0.38rem 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.seletor-visao button.ativa {
+  background: var(--sup-verde);
+  color: var(--verde);
+}
+
 .usuario {
   display: flex;
   align-items: center;
