@@ -2,7 +2,7 @@
 # Build local: docker build -t jarvis . && docker run -p 8080:8080 --env-file backend/.env jarvis
 
 # 1. telas (React) -> arquivos estaticos
-FROM node:22-alpine AS telas
+FROM node:25-alpine AS telas
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
