@@ -293,3 +293,65 @@ func TestIntegracaoGooglePainel(t *testing.T) {
 		t.Errorf("painel = %+v", loPain)
 	}
 }
+
+func TestIntegracaoPatrimonio(t *testing.T) {
+	loRepo := abrirTeste(t)
+	ctx := context.Background()
+	lcMail := fmt.Sprintf("pat-%d@jarvis.local", time.Now().UnixNano())
+	loUsua, err := loRepo.Cadastrar(ctx, "Pat", lcMail, "h", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		loRepo.db.Exec(`DELETE FROM ativos WHERE familia_id = ?`, loUsua.FamiliaID)
+		loRepo.db.Exec(`DELETE FROM usuarios WHERE id = ?`, loUsua.ID)
+		loRepo.db.Exec(`DELETE FROM categorias WHERE familia_id = ?`, loUsua.FamiliaID)
+		loRepo.db.Exec(`DELETE FROM familias WHERE id = ?`, loUsua.FamiliaID)
+	})
+	loFami := loRepo.Familia(loUsua.FamiliaID)
+
+	lnCaix, err := loFami.CriarAtivo(ctx, financas.Ativo{Nome: "Caixinha viagem", Tipo: "caixinha", Moeda: "BRL", Saldo: 150000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lnDola, err := loFami.CriarAtivo(ctx, financas.Ativo{Nome: "Conta dólar", Tipo: "conta", Moeda: "USD", Saldo: 50000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loFami.CriarAtivo(ctx, financas.Ativo{Nome: "X", Tipo: "conta", Moeda: "GBP"}); !errors.Is(err, financas.ErrAtivoInvalido) {
+		t.Errorf("moeda invalida aceita: %v", err)
+	}
+	if err := loFami.AtualizarSaldo(ctx, lnCaix, 175000); err != nil {
+		t.Fatal(err)
+	}
+	if err := loFami.AtualizarSaldo(ctx, lnCaix, 175000); err != nil { // mesmo saldo: nao e "nao encontrado"
+		t.Errorf("saldo igual: %v", err)
+	}
+
+	laAtiv, _ := loFami.ListarAtivos(ctx)
+	if len(laAtiv) != 2 {
+		t.Fatalf("ativos = %+v", laAtiv)
+	}
+	laPont, _ := loFami.HistoricoAtivos(ctx, time.Time{})
+	if len(laPont) != 4 { // 2 criacoes + 2 atualizacoes
+		t.Errorf("historico com %d pontos, esperado 4", len(laPont))
+	}
+
+	// outra familia nao le, nao altera e nao apaga
+	loOutr := loRepo.Familia(1)
+	laDela, _ := loOutr.ListarAtivos(ctx)
+	for _, loAtiv := range laDela {
+		if loAtiv.ID == lnCaix || loAtiv.ID == lnDola {
+			t.Error("familia 1 enxergou ativo de outra familia")
+		}
+	}
+	if err := loOutr.AtualizarSaldo(ctx, lnDola, 1); !errors.Is(err, ErrAtivoNaoEncontrado) {
+		t.Errorf("outra familia alterou o saldo: %v", err)
+	}
+	if err := loOutr.ApagarAtivo(ctx, lnDola); !errors.Is(err, ErrAtivoNaoEncontrado) {
+		t.Errorf("outra familia apagou o ativo: %v", err)
+	}
+	if err := loFami.ApagarAtivo(ctx, lnDola); err != nil {
+		t.Fatal(err)
+	}
+}

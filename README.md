@@ -131,6 +131,7 @@ o binário Go serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa d
 | `/categorias` | meta mensal por categoria e regras de categorização automática |
 | `/chat` | assistente: perguntas em português sobre os gastos, respondidas via tool calling |
 | `/categorias` → **Categorizar com IA** | a IA classifica cada estabelecimento sem categoria, grava e cria regras para as próximas faturas; o que ela não reconhece vira pergunta para o usuário |
+| `/investimentos` | caixinhas, contas em euro e dólar e investimentos; converte para real pela cotação do dia (AwesomeAPI), patrimônio total, rosca por conta, evolução de 12 meses |
 | `/estatisticas` | por mês: gasto por categoria (rosca), onde mais gastou ("no BH gastei X"), comparação com o mês anterior, ticket médio, compras parceladas com o que falta pagar, evolução de 6 meses |
 
 ---

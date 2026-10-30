@@ -136,3 +136,19 @@ export function mesDoArquivo(nome: string) {
 export function linkCategoria(categoriaID: number | null, mes: string) {
   return `/transacoes?categoria=${categoriaID ?? 'sem'}&mes=${mes}`
 }
+
+const moedas: Record<string, Intl.NumberFormat> = {}
+
+/** Valor em centavos na moeda certa: R$ 1.234,56 · US$ 1.234,56 · € 1.234,56 */
+export function fmtMoeda(centavos: number, moeda: string) {
+  moedas[moeda] ??= new Intl.NumberFormat('pt-BR', { style: 'currency', currency: moeda })
+  return moedas[moeda].format(centavos / 100)
+}
+
+/** "1.234,56" ou "1234.5" -> 123456 centavos; null se nao for numero */
+export function lerValor(texto: string): number | null {
+  const limpo = texto.replace(/[^\d,.-]/g, '')
+  const normal = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : limpo
+  const n = Math.round(parseFloat(normal) * 100)
+  return Number.isNaN(n) ? null : n
+}

@@ -1712,6 +1712,83 @@ code {
   color: var(--verde);
 }
 
+.lista-ativos {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.linha-ativo {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--borda);
+  flex-wrap: wrap;
+}
+
+.ativo-nome {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 180px;
+}
+
+.ativo-nome div {
+  display: flex;
+  flex-direction: column;
+}
+
+.ativo-nome em,
+.ativo-reais {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--txt-fraco);
+}
+
+.ativo-reais {
+  font-family: var(--mono);
+  min-width: 7.5rem;
+  text-align: right;
+}
+
+.patrimonio-resumo {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.patrimonio-resumo > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.patrimonio-resumo ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.patrimonio-resumo li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.patrimonio-resumo li em {
+  font-style: normal;
+  color: var(--txt-fraco);
+}
+
 .usuario {
   display: flex;
   align-items: center;

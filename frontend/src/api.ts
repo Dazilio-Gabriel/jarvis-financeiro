@@ -372,3 +372,40 @@ export type Proposta = {
 
 export const moverCategoria = (estabelecimentos: string[], categoria: string) =>
   postarJSON<{ categorizadas: number }>('/api/categorizar/mover', { estabelecimentos, categoria })
+
+export type Moeda = 'BRL' | 'USD' | 'EUR'
+
+export type Ativo = {
+  id: number
+  nome: string
+  tipo: 'caixinha' | 'conta' | 'investimento' | 'outro'
+  moeda: Moeda
+  saldo_centavos: number
+  reais_centavos: number | null
+  atualizado_em: string
+}
+
+export type Patrimonio = {
+  ativos: Ativo[]
+  total_centavos: number
+  total_completo: boolean
+  por_moeda: Partial<Record<Moeda, { saldo_centavos: number; reais_centavos: number }>>
+  por_tipo: Record<string, number>
+  cotacoes: Partial<Record<'USD' | 'EUR', number>> // reais por unidade x10000
+  cotacao_em: string
+  evolucao: { mes: string; total_centavos: number }[]
+}
+
+export const buscarPatrimonio = (sinal?: AbortSignal) => pedir<Patrimonio>('/api/patrimonio', { signal: sinal })
+
+export const criarAtivo = (a: { nome: string; tipo: string; moeda: Moeda; saldo_centavos: number }) =>
+  postarJSON<{ id: number }>('/api/ativos', a)
+
+export const atualizarSaldoAtivo = (id: number, saldo_centavos: number) =>
+  pedir<{ ok: boolean }>(`/api/ativos/${id}/saldo`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ saldo_centavos }),
+  })
+
+export const apagarAtivo = (id: number) => pedir<{ ok: boolean }>(`/api/ativos/${id}`, { method: 'DELETE' })

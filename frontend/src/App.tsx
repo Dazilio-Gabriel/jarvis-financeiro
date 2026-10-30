@@ -7,6 +7,7 @@ import Importar from './paginas/Importar'
 import Categorias from './paginas/Categorias'
 import Chat from './paginas/Chat'
 import Estatisticas from './paginas/Estatisticas'
+import Investimentos from './paginas/Investimentos'
 import Entrar from './paginas/Entrar'
 import Familia from './paginas/Familia'
 import Admin from './paginas/Admin'
@@ -17,6 +18,7 @@ type Conexao = 'carregando' | 'ok' | 'erro'
 const MENU = [
   { rota: '/dashboard', icone: '◈', nome: 'Dashboard', desc: 'visão do mês' },
   { rota: '/estatisticas', icone: '◔', nome: 'Estatísticas', desc: 'onde e quanto gastei' },
+  { rota: '/investimentos', icone: '◇', nome: 'Investimentos', desc: 'euro, dólar e caixinhas' },
   { rota: '/transacoes', icone: '≡', nome: 'Transações', desc: 'todos os lançamentos' },
   { rota: '/importar', icone: '↧', nome: 'Importar', desc: 'CSV do banco' },
   { rota: '/categorias', icone: '◐', nome: 'Categorias', desc: 'orçamento e regras' },
@@ -179,6 +181,7 @@ function Logado({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }) {
             <Route path="/categorias" element={<Categorias />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/estatisticas" element={<Estatisticas />} />
+            <Route path="/investimentos" element={<Investimentos />} />
             <Route path="/familia" element={<Familia />} />
             {usuario.admin && <Route path="/admin" element={<Admin />} />}
             <Route path="*" element={<NaoEncontrado />} />

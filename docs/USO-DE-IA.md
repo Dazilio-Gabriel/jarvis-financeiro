@@ -266,3 +266,19 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
 - **Resultado:** seletor "mês da compra | mês da fatura" no Dashboard e nas Estatísticas; a escolha
   vai em toda requisição (`X-Visao-Mes`) e vale também para Transações e para o chat; padrão
   "mês da compra". Nenhuma reimportação: o banco já guardava a data da compra e o mês da fatura.
+
+### 2026-10-30 — Investimentos (euro, dólar e caixinhas)
+- **Quem:** Gabriel Dazilio Fanchiotti · **Ferramenta:** Claude Code (Claude Opus 5.5)
+- **Prompts (literais):**
+  > eu mudei algumas coisas, agora ficou bem bom, consegue por gentileza criar um menu novo e
+  > depois atualizar o dashboard, preciso fazer para dinheiro em euro e dolar, caixainha e caixinha
+  > da nubanck, que seriam meus investimentos
+
+  > cade a dashboard do euro e dolar, faz legal ai papai
+- **Resultado:** migration 006 (`ativos`, `ativos_historico`); menu **Investimentos**: contas por
+  tipo (caixinha, conta, investimento) e moeda (BRL, USD, EUR), saldo editável, cada atualização
+  vira histórico; conversão para real pela cotação do dia (AwesomeAPI, gratuita; cache de 30 min;
+  se a API cair vale a última cotação boa); cotação guardada como inteiro (x10000) para o total
+  não acumular erro de ponto flutuante; patrimônio total, quadro por moeda, rosca, evolução de 12
+  meses; quadro de investimentos no Dashboard. Testes: conversão, leitura da cotação, cache e queda
+  da API, isolamento entre famílias.

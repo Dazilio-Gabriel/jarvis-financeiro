@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { buscarEvolucao, buscarResumo, buscarTransacoes } from '../api'
+import { buscarEvolucao, buscarPatrimonio, buscarResumo, buscarTransacoes } from '../api'
 import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, SeletorVisao, Vazio } from '../componentes/Base'
-import { fmtBRL, fmtDataCurta, limitesMes, linkCategoria, mesAtual, rotuloMes, useBusca } from '../util'
+import { fmtBRL, fmtDataCurta, fmtMoeda, limitesMes, linkCategoria, mesAtual, rotuloMes, useBusca } from '../util'
 
 export default function Dashboard() {
   // mes do painel e a visao (compra ou fatura) que a pessoa escolheu
@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [resumo, recarregar] = useBusca((s) => buscarResumo(s, de, ate), [mes, visao])
   const [ultimas] = useBusca((s) => buscarTransacoes({ limite: 8, de, ate }, s), [mes, visao])
   const [evolucao] = useBusca((s) => buscarEvolucao(s, 6), [visao])
+  const [patrimonio] = useBusca((s) => buscarPatrimonio(s))
 
   if (resumo.fase === 'carregando') {
     return (
@@ -193,6 +194,44 @@ export default function Dashboard() {
               )}
             </Cartao>
           </div>
+
+          {patrimonio.fase === 'ok' && (
+            <Cartao
+              titulo="INVESTIMENTOS"
+              indice={5}
+              extra={
+                <NavLink to="/investimentos" className="botao pequeno">
+                  {patrimonio.dados.ativos.length ? 'ver tudo' : '+ cadastrar'}
+                </NavLink>
+              }
+            >
+              {patrimonio.dados.ativos.length === 0 ? (
+                <p className="dica">
+                  Cadastre suas caixinhas e as contas em euro e dólar para ver o patrimônio aqui.
+                </p>
+              ) : (
+                <div className="patrimonio-resumo">
+                  <div>
+                    <span className="rotulo fraco">PATRIMÔNIO</span>
+                    <strong className="kpi-valor verde">{fmtBRL(patrimonio.dados.total_centavos)}</strong>
+                  </div>
+                  <ul>
+                    {patrimonio.dados.ativos.slice(0, 5).map((a) => (
+                      <li key={a.id}>
+                        <span>{a.nome}</span>
+                        <span className="num">
+                          {fmtMoeda(a.saldo_centavos, a.moeda)}
+                          {a.moeda !== 'BRL' && a.reais_centavos !== null && (
+                            <em> ≈ {fmtBRL(a.reais_centavos)}</em>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Cartao>
+          )}
 
           {evolucao.fase === 'ok' && evolucao.dados.meses.length > 1 && (
             <Cartao titulo="EVOLUÇÃO MENSAL" indice={6}>

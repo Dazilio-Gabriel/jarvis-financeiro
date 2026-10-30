@@ -34,6 +34,7 @@ type Servidor struct {
 	producao  bool                               // HTTPS garantido pela hospedagem: cookie Secure e HSTS sempre
 	donoMail  string                             // unico e-mail que pode assumir a familia 1
 	catIA     assistente.ModeloJSON              // nil = "Categorizar com IA" desligado
+	cotacao   cotador                            // dolar e euro em reais, para o patrimonio
 	google    *oauth2.Config                     // nil = "Entrar com Google" desligado
 	userinfo  string                             // endpoint do perfil Google (trocado no teste)
 }
@@ -42,7 +43,7 @@ func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
 	loServ := &Servidor{repo: poRepo, token: pcToke, integFami: 1,
 		limLogi: novoLimitador(10, 15*time.Minute), limMail: novoLimitador(10, 15*time.Minute),
 		limCada: novoLimitador(10, time.Hour), limConv: novoLimitador(30, time.Hour),
-		limChat: novoLimitador(40, time.Hour)}
+		limChat: novoLimitador(40, time.Hour), cotacao: novoAwesomeAPI()}
 	if poRepo != nil {
 		loServ.auth = poRepo
 	}
@@ -107,6 +108,10 @@ func (s *Servidor) Rotas() http.Handler {
 	loPriv.HandleFunc("GET /api/resumo", s.resumo)
 	loPriv.HandleFunc("GET /api/evolucao", s.evolucao)
 	loPriv.HandleFunc("GET /api/estatisticas", s.estatisticas)
+	loPriv.HandleFunc("GET /api/patrimonio", s.patrimonio)
+	loPriv.HandleFunc("POST /api/ativos", s.criarAtivo)
+	loPriv.HandleFunc("PUT /api/ativos/{id}/saldo", s.atualizarSaldoAtivo)
+	loPriv.HandleFunc("DELETE /api/ativos/{id}", s.apagarAtivo)
 
 	loPriv.HandleFunc("POST /api/chat", s.chat)
 
@@ -116,7 +121,7 @@ func (s *Servidor) Rotas() http.Handler {
 	loProt := s.exigirLogin(loPriv)
 	for _, lcRota := range []string{"/api/auth/eu", "/api/admin/", "/api/familia", "/api/familia/", "/api/categorias", "/api/categorias/",
 		"/api/regras", "/api/regras/", "/api/categorizar/", "/api/transacoes", "/api/transacoes/", "/api/resumo", "/api/evolucao",
-		"/api/estatisticas", "/api/chat", "/api/importar", "/api/importacoes"} {
+		"/api/estatisticas", "/api/patrimonio", "/api/ativos", "/api/ativos/", "/api/chat", "/api/importar", "/api/importacoes"} {
 		loMux.Handle(lcRota, loProt)
 	}
 
