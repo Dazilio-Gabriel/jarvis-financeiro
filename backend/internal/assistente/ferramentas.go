@@ -59,7 +59,7 @@ func Ferramentas() []Ferramenta {
 				"ate": texto("data final AAAA-MM-DD, inclusive"),
 			}, "de", "ate"),
 		ferramenta("gasto_por_categoria",
-			"Gasto (saídas) de um mês agrupado por categoria, com o orçamento de cada uma.",
+			"Gasto (saídas) de um mês agrupado por categoria (Mercado, Alimentação, Transporte, Moradia, Saúde...), com o orçamento de cada uma. É a ferramenta certa para 'quanto gastei com mercado/transporte/...'.",
 			map[string]any{"mes": texto("mês no formato AAAA-MM")}, "mes"),
 		ferramenta("buscar_transacoes",
 			"Lista transações (no máximo 20) filtrando por período, categoria e texto da descrição.",
@@ -73,7 +73,7 @@ func Ferramentas() []Ferramenta {
 			"Lista as categorias cadastradas e o orçamento mensal de cada uma.",
 			map[string]any{}),
 		ferramenta("gasto_por_estabelecimento",
-			"Quanto foi gasto em cada estabelecimento (loja, mercado, app) no mês, do maior para o menor. Use para perguntas como 'quanto gastei no BH' ou 'onde mais gastei'.",
+			"Gasto por LOJA específica, pelo nome do estabelecimento (ex.: 'no BH', 'na Kabum', 'onde mais gastei'). NÃO use para categorias como mercado, alimentação ou transporte: para isso use gasto_por_categoria.",
 			map[string]any{
 				"mes":   texto("mês no formato AAAA-MM"),
 				"busca": texto("trecho do nome do estabelecimento, ex.: BH (opcional)"),

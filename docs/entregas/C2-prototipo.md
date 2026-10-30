@@ -91,6 +91,11 @@ expuseram três defeitos reais, corrigidos antes desta: estouro do limite de tok
 (tratado com nova tentativa no 429), raciocínio do modelo vazando para a resposta e o modelo
 invertendo a direção de uma variação (a ferramenta passou a devolver "subiu/caiu" pronto).
 
+Reexecução em 30/10, depois da ferramenta `gasto_por_estabelecimento`
+([relatório](../eval/eval-2026-10-30-0839.md)): 26/26 de novo. A execução intermediária
+([25/26](../eval/eval-2026-10-30-0828.md)) mostrou uma regressão real: o modelo passou a ler
+"mercado" como nome de loja em vez de categoria; a descrição das ferramentas foi ajustada.
+
 Métricas: exatidão numérica, uso correto de ferramenta, recusa adequada, robustez, alucinação
 (valor em reais sem ter chamado ferramenta), tokens por pergunta e latência.
 
