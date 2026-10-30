@@ -29,7 +29,9 @@ const (
 
 // autenticador e o pedaco do repositorio que o login usa; interface para o teste usar um falso
 type autenticador interface {
-	Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv string) (armazenamento.Usuario, error)
+	Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv string, llDono bool) (armazenamento.Usuario, error)
+	FamiliaDoConvite(ctx context.Context, pcConv string) (string, error)
+	NovoConvite(ctx context.Context, pnFami int64) (string, error)
 	SenhaDoEmail(ctx context.Context, pcMail string) (armazenamento.Usuario, string, error)
 	CriarSessao(ctx context.Context, pnUsua int64, pcHash string, pdExpi time.Time) error
 	Sessao(ctx context.Context, pcHash string) (armazenamento.Usuario, error)
@@ -92,15 +94,35 @@ func (s *Servidor) abrirSessao(w http.ResponseWriter, r *http.Request, pnUsua in
 		Path:     "/",
 		Expires:  ldExpi,
 		HttpOnly: true, // JavaScript nao le: um XSS nao rouba a sessao
-		Secure:   https(r),
+		Secure:   s.https(r),
 		SameSite: http.SameSiteLaxMode, // outro site nao consegue fazer POST com o cookie
 	})
 	return nil
 }
 
-// https: direto (r.TLS) ou atras do proxy da hospedagem, que avisa pelo X-Forwarded-Proto
-func https(r *http.Request) bool {
-	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+// https: em producao e sempre (a hospedagem so aceita HTTPS) e nao depende de cabecalho que o
+// cliente pode forjar; fora dela, olha o TLS direto ou o aviso do proxy
+func (s *Servidor) https(r *http.Request) bool {
+	return s.producao || r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+}
+
+// podeSerDono: so o DONO_EMAIL assume a familia 1 (os dados de antes do login). Sem DONO_EMAIL,
+// so fora de producao: num site publico o primeiro estranho a se cadastrar levaria tudo.
+func (s *Servidor) podeSerDono(pcMail string) bool {
+	if s.donoMail != "" {
+		return strings.EqualFold(pcMail, s.donoMail)
+	}
+	return !s.producao
+}
+
+// oBcrypt limita a 2 os bcrypt simultaneos: cada um come ~250 ms de CPU, e o free tier tem
+// fracao de um nucleo; sem isso, uma rajada de logins derruba o site para todo mundo
+var oBcrypt = make(chan struct{}, 2)
+
+func comBcrypt[T any](pfFunc func() T) T {
+	oBcrypt <- struct{}{}
+	defer func() { <-oBcrypt }()
+	return pfFunc()
 }
 
 type usuarioDTO struct {
@@ -159,13 +181,17 @@ func (s *Servidor) cadastrar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	laHash, err := bcrypt.GenerateFromPassword([]byte(loPedi.Senha), nCustoBcrypt)
+	laHash, err := comBcrypt(func() hashOuErro {
+		laHash, err := bcrypt.GenerateFromPassword([]byte(loPedi.Senha), nCustoBcrypt)
+		return hashOuErro{laHash, err}
+	}).desmontar()
 	if err != nil {
 		erroJSON(w, http.StatusInternalServerError, "erro ao proteger a senha")
 		return
 	}
 
-	loUsua, err := s.auth.Cadastrar(r.Context(), loPedi.Nome, loPedi.Email, string(laHash), loPedi.Convite)
+	loUsua, err := s.auth.Cadastrar(r.Context(), loPedi.Nome, loPedi.Email, string(laHash), loPedi.Convite,
+		s.podeSerDono(loPedi.Email))
 	switch {
 	case errors.Is(err, armazenamento.ErrEmailEmUso):
 		erroJSON(w, http.StatusConflict, "este e-mail já tem cadastro; faça login")
@@ -200,6 +226,11 @@ func (s *Servidor) entrar(w http.ResponseWriter, r *http.Request) {
 	if !llOk {
 		return
 	}
+	// por e-mail tambem: trocar de IP nao da mais chutes na senha da mesma conta
+	if s.limMail.bloqueado(loPedi.Email) {
+		erroJSON(w, http.StatusTooManyRequests, "muitas tentativas nesta conta, espere alguns minutos")
+		return
+	}
 
 	loUsua, lcHash, err := s.auth.SenhaDoEmail(r.Context(), loPedi.Email)
 	if err != nil && !errors.Is(err, armazenamento.ErrNaoEncontrado) {
@@ -211,8 +242,10 @@ func (s *Servidor) entrar(w http.ResponseWriter, r *http.Request) {
 		lcHash = string(aHashFalso)
 	}
 	// mesma mensagem para e-mail inexistente e senha errada: nao confirma quem tem conta
-	if bcrypt.CompareHashAndPassword([]byte(lcHash), []byte(loPedi.Senha)) != nil || loUsua.ID == 0 {
+	errSenh := comBcrypt(func() error { return bcrypt.CompareHashAndPassword([]byte(lcHash), []byte(loPedi.Senha)) })
+	if errSenh != nil || loUsua.ID == 0 {
 		s.limLogi.registrar(ipDe(r))
+		s.limMail.registrar(loPedi.Email)
 		erroJSON(w, http.StatusUnauthorized, "e-mail ou senha incorretos")
 		return
 	}
@@ -231,7 +264,7 @@ func (s *Servidor) sair(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.SetCookie(w, &http.Cookie{Name: cCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true,
-		Secure: https(r), SameSite: http.SameSiteLaxMode})
+		Secure: s.https(r), SameSite: http.SameSiteLaxMode})
 	responderJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -243,7 +276,7 @@ func (s *Servidor) familia(w http.ResponseWriter, r *http.Request) {
 	loUsua := usuarioDe(r)
 	laMemb, err := s.auth.Membros(r.Context(), loUsua.FamiliaID)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 	laDTO := make([]usuarioDTO, 0, len(laMemb))
@@ -302,15 +335,52 @@ func (l *limitador) recentes(pcChav string) []time.Time {
 	return laReca
 }
 
-// ipDe: atras do proxy da hospedagem o IP real vem no X-Forwarded-For (o primeiro da lista)
+// ipDe: atras do proxy o IP real e o ULTIMO do X-Forwarded-For, o que o proprio proxy anexou.
+// O primeiro vem do cliente e pode ser inventado a cada tentativa para fugir do limite.
 func ipDe(r *http.Request) string {
 	if lcFwd := r.Header.Get("X-Forwarded-For"); lcFwd != "" {
-		lcPrim, _, _ := strings.Cut(lcFwd, ",")
-		return strings.TrimSpace(lcPrim)
+		laPart := strings.Split(lcFwd, ",")
+		return strings.TrimSpace(laPart[len(laPart)-1])
 	}
 	lcHost, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr
 	}
 	return lcHost
+}
+
+type hashOuErro struct {
+	hash []byte
+	err  error
+}
+
+func (h hashOuErro) desmontar() ([]byte, error) { return h.hash, h.err }
+
+// convite e publico (a tela de cadastro usa antes do login) e devolve so o nome da familia
+func (s *Servidor) convite(w http.ResponseWriter, r *http.Request) {
+	if s.limConv.bloqueado(ipDe(r)) {
+		erroJSON(w, http.StatusTooManyRequests, "muitas tentativas, espere alguns minutos")
+		return
+	}
+	s.limConv.registrar(ipDe(r)) // sem isso daria para varrer codigos de convite
+	lcNome, err := s.auth.FamiliaDoConvite(r.Context(), r.PathValue("codigo"))
+	if errors.Is(err, armazenamento.ErrConviteInvalido) {
+		erroJSON(w, http.StatusNotFound, "código de convite não encontrado")
+		return
+	}
+	if err != nil {
+		erroInterno(w, err)
+		return
+	}
+	responderJSON(w, http.StatusOK, map[string]string{"familia": lcNome})
+}
+
+// novoConvite invalida o link antigo (vazou, ou alguem saiu da familia)
+func (s *Servidor) novoConvite(w http.ResponseWriter, r *http.Request) {
+	lcConv, err := s.auth.NovoConvite(r.Context(), usuarioDe(r).FamiliaID)
+	if err != nil {
+		erroInterno(w, err)
+		return
+	}
+	responderJSON(w, http.StatusOK, map[string]string{"convite": lcConv})
 }

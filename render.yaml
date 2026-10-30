@@ -7,7 +7,7 @@ services:
     plan: free
     region: virginia # mesma regiao (us-east-1) do banco no TiDB Cloud: menos latencia por consulta
     branch: main
-    autoDeploy: true # cada push na main publica sozinho
+    autoDeployTrigger: checksPass # publica a cada push na main, mas so depois da CI passar
     healthCheckPath: /api/saude
     envVars:
       - key: MYSQL_DSN
@@ -20,5 +20,9 @@ services:
         value: "1" # cria/atualiza as tabelas na subida
       - key: TZ
         value: America/Sao_Paulo
+      - key: PRODUCAO
+        value: "1" # cookie sempre Secure e HSTS forte, sem depender de cabecalho do cliente
+      - key: DONO_EMAIL
+        sync: false # SEU e-mail: so ele pode assumir a familia 1 (com os dados importados)
       - key: API_TOKEN
         generateValue: true # token da integracao (n8n), gerado pelo Render

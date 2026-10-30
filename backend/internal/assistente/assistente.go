@@ -21,6 +21,9 @@ const nMaxRodadas = 5
 // historico curto: contexto suficiente para "e no mes passado?" sem estourar o free tier
 const nMaxHistorico = 10
 
+// teto por fala do historico: o cliente manda o historico, e sem isso caberia um livro nele
+const nMaxTurno = 2000
+
 var ErrSemResposta = errors.New("o modelo nao chegou a uma resposta")
 
 type Assistente struct {
@@ -107,7 +110,7 @@ func historico(paHist []Turno) []Mensagem {
 
 	laMens := make([]Mensagem, 0, len(paHist))
 	for _, loTurn := range paHist {
-		lcCont := strings.TrimSpace(loTurn.Conteudo)
+		lcCont := util.Trunca(strings.TrimSpace(loTurn.Conteudo), nMaxTurno)
 		if lcCont == "" {
 			continue
 		}

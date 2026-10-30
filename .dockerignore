@@ -1,6 +1,7 @@
 .git
 **/node_modules
 frontend/dist
-backend/.env
+**/.env*
+.github
 **/*.csv
 docs/entregas/*.pdf

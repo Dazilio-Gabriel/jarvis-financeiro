@@ -182,3 +182,19 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   login; o servidor de arquivos listava pastas — todos corrigidos.
 - **Revisão humana:** _(preencher: cadastro feito primeiro pelo autor em cada banco; deploy no
   Render/TiDB conferido)._
+
+### 2026-10-30 — Revisão de segurança antes do deploy
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5), com dois subagentes revisores independentes
+- **Tarefa:** revisar a segurança do site antes de publicá-lo e corrigir o que fosse achado.
+- **Prompt (literal):**
+  > entendi, bora fazer esse bomba ai funcionar hospedado, outra coisa, como sera um site web,
+  > consegue rodar um revisor de cyberseguranca para proteger o site e essas cosias?
+
+  e, durante a sessão:
+  > tire tudo oq for informacao importante do f11 do google, faã protecao contra ataque de url e
+  > tudo mais, sqlinjection e essas coisas pf
+- **Resultado:** achados, correções e testes em [`docs/SEGURANCA.md`](SEGURANCA.md) (1 crítico,
+  1 alto, 7 médios, vários baixos, todos corrigidos ou registrados como risco aceito). Testes de
+  ataque explícitos (SQL injection, path traversal, CSRF, IP forjado, corpo gigante). Go 1.26.10.
+- **Revisão humana:** _(preencher)_

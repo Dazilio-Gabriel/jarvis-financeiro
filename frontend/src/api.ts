@@ -270,3 +270,8 @@ export const cadastrar = (dados: { nome: string; email: string; senha: string; c
 export const sair = () => postarJSON<{ ok: boolean }>('/api/auth/sair', {})
 
 export const buscarFamilia = (sinal?: AbortSignal) => pedir<Familia>('/api/familia', { signal: sinal })
+
+export const consultarConvite = (codigo: string, sinal?: AbortSignal) =>
+  pedir<{ familia: string }>(`/api/convite/${encodeURIComponent(codigo)}`, { signal: sinal })
+
+export const gerarNovoConvite = () => postarJSON<{ convite: string }>('/api/familia/convite', {})

@@ -87,7 +87,8 @@ Antes de trocar de vez, rode o eval com o provedor novo (`go run ./cmd/eval`) e 
 ### 2. App no Render
 1. Crie a conta em https://render.com (login com o GitHub) e autorize o repositório.
 2. **New → Blueprint** → escolha `jarvis-financeiro`. O Render lê o `render.yaml`.
-3. Ele pede os valores secretos: `MYSQL_DSN` (o do passo 1) e `GROQ_API_KEY`.
+3. Ele pede os valores secretos: `MYSQL_DSN` (o do passo 1), `GROQ_API_KEY` e `DONO_EMAIL`
+   (**o seu e-mail**: só ele pode assumir a família 1, que recebe os dados copiados do PC).
 4. **Apply**. O primeiro build leva uns 5 minutos. No log aparece
    `migrations aplicadas agora: [001_inicial.sql 002_mes_ref.sql 003_usuarios.sql]`.
 5. Abra a URL `https://jarvis-financeiro-XXXX.onrender.com`, **crie a sua conta primeiro** e mande
@@ -110,6 +111,7 @@ já criou com os mesmos ids. Não versione esse arquivo: ele tem os seus gastos.
 ---
 
 ## Segurança e LGPD na nuvem
+- Revisão de segurança antes do deploy, com achados e correções: [SEGURANCA.md](SEGURANCA.md).
 - Os dados financeiros saem do seu PC para servidores de terceiros (Render e TiDB, nos EUA). Para
   o piloto com outras famílias, isso precisa estar no termo de consentimento (relatório C1, seção 8).
 - Chave da Groq, DSN e token ficam só nas variáveis de ambiente do Render, nunca no git.

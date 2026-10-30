@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -100,9 +101,29 @@ func TestIntegracaoLoteResumoEBusca(t *testing.T) {
 		t.Errorf("busca ifood = %+v (esperado 2, mais recente primeiro)", laAcha)
 	}
 
-	// valor com aspas e % nao pode quebrar o SQL: o filtro vai sempre como parametro
-	if _, err := loFami.Listar(ctx, financas.Filtro{Busca: `' OR 1=1 -- %`}); err != nil {
-		t.Errorf("busca com aspas quebrou a consulta: %v", err)
+	// SQL injection classico em todo campo de texto que vai ao banco: tudo vai como parametro (?),
+	// entao o banco trata como texto. A tabela tem que continuar la e a busca nao pode trazer tudo.
+	for _, lcAtaq := range []string{
+		`' OR 1=1 -- %`,
+		`'; DROP TABLE transacoes; --`,
+		`" OR ""="`,
+		`%' UNION SELECT id, email FROM usuarios -- `,
+	} {
+		laAcha, err := loFami.Listar(ctx, financas.Filtro{Busca: lcAtaq})
+		if err != nil {
+			t.Errorf("busca %q quebrou a consulta: %v", lcAtaq, err)
+		}
+		if len(laAcha) != 0 {
+			t.Errorf("busca %q devolveu %d linhas: a injecao funcionou", lcAtaq, len(laAcha))
+		}
+	}
+	if _, _, err := loFami.InserirLote(ctx, []financas.Transacao{
+		{Data: dia(9), Descricao: `Robert'); DROP TABLE transacoes;--`, Valor: -1, Tipo: financas.Debito, Fonte: "teste"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if lnTota, err := loFami.Contar(ctx, financas.Filtro{De: dia(1), Ate: dia(31)}); err != nil || lnTota != 5 {
+		t.Errorf("depois das tentativas de injecao: %d transacoes, err %v (tabela sumiu?)", lnTota, err)
 	}
 }
 
@@ -113,11 +134,11 @@ func TestIntegracaoFamiliasIsoladasESessao(t *testing.T) {
 	lcMail := fmt.Sprintf("teste-%d@jarvis.local", time.Now().UnixNano())
 
 	// em banco vazio o primeiro cadastro assume a familia 1; o segundo sempre ganha familia nova
-	loPrim, err := loRepo.Cadastrar(ctx, "Primeiro", "p-"+lcMail, "hash-qualquer", "")
+	loPrim, err := loRepo.Cadastrar(ctx, "Primeiro", "p-"+lcMail, "hash-qualquer", "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	loUsua, err := loRepo.Cadastrar(ctx, "Teste Isolamento", lcMail, "hash-qualquer", "")
+	loUsua, err := loRepo.Cadastrar(ctx, "Teste Isolamento", lcMail, "hash-qualquer", "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,17 +157,21 @@ func TestIntegracaoFamiliasIsoladasESessao(t *testing.T) {
 		t.Fatal("segundo cadastro sem convite caiu na familia 1")
 	}
 
+	if lcNome, err := loRepo.FamiliaDoConvite(ctx, strings.ToLower(loUsua.Convite)); err != nil || lcNome != loUsua.FamiliaNome {
+		t.Errorf("FamiliaDoConvite = %q, %v", lcNome, err)
+	}
+
 	// com o convite, entra na familia de quem convidou
-	loConv, err := loRepo.Cadastrar(ctx, "Convidado", "c-"+lcMail, "x", loUsua.Convite)
+	loConv, err := loRepo.Cadastrar(ctx, "Convidado", "c-"+lcMail, "x", loUsua.Convite, false)
 	if err != nil || loConv.FamiliaID != loUsua.FamiliaID {
 		t.Errorf("convite: %+v, %v", loConv, err)
 	}
 	t.Cleanup(func() { loRepo.db.Exec(`DELETE FROM usuarios WHERE id = ?`, loConv.ID) })
 
-	if _, err := loRepo.Cadastrar(ctx, "Outro", lcMail, "x", ""); !errors.Is(err, ErrEmailEmUso) {
+	if _, err := loRepo.Cadastrar(ctx, "Outro", lcMail, "x", "", false); !errors.Is(err, ErrEmailEmUso) {
 		t.Errorf("e-mail repetido: err = %v", err)
 	}
-	if _, err := loRepo.Cadastrar(ctx, "Outro", "x"+lcMail, "x", "NAOEXISTE1"); !errors.Is(err, ErrConviteInvalido) {
+	if _, err := loRepo.Cadastrar(ctx, "Outro", "x"+lcMail, "x", "NAOEXISTE1", false); !errors.Is(err, ErrConviteInvalido) {
 		t.Errorf("convite invalido: err = %v", err)
 	}
 
@@ -168,6 +193,11 @@ func TestIntegracaoFamiliasIsoladasESessao(t *testing.T) {
 	laCat1, _ := loFam1.ListarCategorias(ctx)
 	if _, err := loNova.CriarRegra(ctx, financas.RegraCategoria{Padrao: "X", CategoriaID: laCat1[0].ID}); !errors.Is(err, ErrCategoriaAlheia) {
 		t.Errorf("regra com categoria alheia: err = %v", err)
+	}
+	lnAlhe := laCat1[0].ID
+	loTran := financas.Transacao{Data: dia(6), Descricao: "X", Valor: -1, Tipo: financas.Debito, Fonte: "teste", CategoriaID: &lnAlhe}
+	if err := loNova.Inserir(ctx, &loTran); !errors.Is(err, ErrCategoriaAlheia) {
+		t.Errorf("lancamento com categoria alheia: err = %v", err)
 	}
 	laCatN, _ := loNova.ListarCategorias(ctx)
 	if len(laCatN) != len(categoriasIniciais) {

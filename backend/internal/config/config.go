@@ -15,6 +15,8 @@ type Config struct {
 	Migrar    bool   // aplica as migrations na subida (producao, com usuario que pode fazer DDL)
 	APIToken  string // protege /api/integracao/* (n8n, automacoes)
 	IntegFami int64  // familia dona do que chega pela integracao
+	Producao  bool   // atras de HTTPS garantido (Render): cookie Secure e HSTS sempre
+	DonoEmail string // unico e-mail que assume a familia 1 (dados de antes do login)
 	ClaudeKey string
 
 	// LLM: qualquer API compativel com a da OpenAI. Padrao GroqCloud; LLM_* troca de provedor
@@ -42,6 +44,8 @@ func Carregar(pcCami string) Config {
 		Migrar:    os.Getenv("MIGRAR_NA_SUBIDA") == "1",
 		APIToken:  os.Getenv("API_TOKEN"),
 		IntegFami: lnFami,
+		Producao:  os.Getenv("PRODUCAO") == "1",
+		DonoEmail: os.Getenv("DONO_EMAIL"),
 		ClaudeKey: os.Getenv("ANTHROPIC_API_KEY"),
 		LLMURL:    os.Getenv("LLM_URL"),
 		LLMChave:  ou(os.Getenv("LLM_CHAVE"), os.Getenv("GROQ_API_KEY")),

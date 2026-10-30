@@ -28,22 +28,22 @@ func (s *Servidor) estatisticas(w http.ResponseWriter, r *http.Request) {
 
 	loResu, err := loDado.Resumo(ctx, ldMes, ldFim)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 	loAnte, err := loDado.Resumo(ctx, ldMes.AddDate(0, -1, 0), ldMes.AddDate(0, 0, -1))
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 	laTran, err := loDado.Listar(ctx, financas.Filtro{De: ldMes, Ate: ldFim, SemLimite: true})
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 	laCate, err := loDado.ListarCategorias(ctx)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 	loCate := map[int64]financas.Categoria{}
@@ -129,7 +129,7 @@ func (s *Servidor) estatisticas(w http.ResponseWriter, r *http.Request) {
 		ldIni := ldMes.AddDate(0, -lnIdx, 0)
 		loMes, err := loDado.Resumo(ctx, ldIni, ldIni.AddDate(0, 1, -1))
 		if err != nil {
-			erroJSON(w, http.StatusInternalServerError, err.Error())
+			erroInterno(w, err)
 			return
 		}
 		laPart := make([]map[string]any, 0, len(loMes.PorCategoria))

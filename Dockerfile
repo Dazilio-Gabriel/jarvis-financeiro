@@ -10,7 +10,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # 2. API em Go, com as telas embutidas (go:embed em internal/web/dist)
-FROM golang:1.26-alpine AS api
+FROM golang:1.26.10-alpine AS api
 WORKDIR /app/backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download

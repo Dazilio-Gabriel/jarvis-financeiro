@@ -224,6 +224,9 @@ func (f *Familia) Inserir(ctx context.Context, poTran *financas.Transacao) error
 	if poTran.HashExterno == "" {
 		poTran.GerarHash()
 	}
+	if err := f.conferirCategoria(ctx, poTran.CategoriaID); err != nil {
+		return err
+	}
 
 	var loCate any
 	if poTran.CategoriaID != nil {
@@ -305,6 +308,24 @@ func (f *Familia) Contar(ctx context.Context, poFilt financas.Filtro) (int, erro
 		return 0, fmt.Errorf("contar transacoes: %w", err)
 	}
 	return lnTota, nil
+}
+
+// conferirCategoria barra id de categoria de outra familia: com ele, o resumo mostraria o nome e
+// o orcamento da categoria alheia (achado da revisao de seguranca)
+func (f *Familia) conferirCategoria(ctx context.Context, poCate *int64) error {
+	if poCate == nil {
+		return nil
+	}
+	var lnAcha int
+	err := f.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM categorias WHERE id = ? AND familia_id = ?`, *poCate, f.id).Scan(&lnAcha)
+	if err != nil {
+		return fmt.Errorf("conferir categoria: %w", err)
+	}
+	if lnAcha == 0 {
+		return ErrCategoriaAlheia
+	}
+	return nil
 }
 
 // ApagarFonte remove as transacoes de uma origem; usado para recriar a base sintetica
@@ -412,7 +433,7 @@ func (f *Familia) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.R
 		       SUM(ABS(t.valor_centavos)),
 		       COUNT(*)
 		FROM transacoes t
-		LEFT JOIN categorias c ON c.id = t.categoria_id
+		LEFT JOIN categorias c ON c.id = t.categoria_id AND c.familia_id = t.familia_id
 		WHERE t.familia_id = ? AND t.`+lcColu+` >= ? AND t.`+lcColu+` <= ? AND t.tipo = 'debito'
 		GROUP BY t.categoria_id, c.nome, c.cor, c.orcamento_centavos
 		ORDER BY SUM(ABS(t.valor_centavos)) DESC`, f.id, pdDe, pdAte)

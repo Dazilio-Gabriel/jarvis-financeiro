@@ -51,7 +51,12 @@ func main() {
 		log.Printf("migrations aplicadas agora: %v", laApli)
 	}
 
-	loWeb := web.NovoServidor(loRepo, loConf.APIToken).ComFamiliaIntegracao(loConf.IntegFami)
+	loWeb := web.NovoServidor(loRepo, loConf.APIToken).
+		ComFamiliaIntegracao(loConf.IntegFami).
+		ComProducao(loConf.Producao, loConf.DonoEmail)
+	if loConf.Producao && loConf.DonoEmail == "" {
+		log.Println("AVISO: PRODUCAO sem DONO_EMAIL: ninguem assume a familia 1 (os dados de antes do login)")
+	}
 	if loConf.LLMChave != "" {
 		loMode := assistente.NovoCompativel(loConf.LLMURL, loConf.LLMChave, loConf.LLMModelo)
 		// um assistente por pergunta, preso a familia de quem perguntou
@@ -66,7 +71,9 @@ func main() {
 	loServ := &http.Server{
 		Addr:              ":" + loConf.Porta,
 		Handler:           loWeb.Rotas(),
-		ReadHeaderTimeout: 5 * time.Second, // sem isso conexao lenta segura o handler pra sempre
+		ReadHeaderTimeout: 5 * time.Second,  // sem isso conexao lenta segura o handler pra sempre
+		ReadTimeout:       60 * time.Second, // corpo pingando byte a byte prende goroutine e conexao do banco
+		IdleTimeout:       120 * time.Second,
 	}
 
 	// sobe numa goroutine para o main continuar e conseguir esperar o sinal de parada

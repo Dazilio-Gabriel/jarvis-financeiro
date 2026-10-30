@@ -22,7 +22,7 @@ type categoriaDTO struct {
 func (s *Servidor) listarCategorias(w http.ResponseWriter, r *http.Request) {
 	laCate, err := s.dados(r).ListarCategorias(r.Context())
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (s *Servidor) salvarOrcamento(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.dados(r).SalvarOrcamento(r.Context(), lnCate, loOrca); err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -80,7 +80,7 @@ type regraDTO struct {
 func (s *Servidor) listarRegras(w http.ResponseWriter, r *http.Request) {
 	laRegr, err := s.dados(r).ListarRegras(r.Context())
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (s *Servidor) criarRegra(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -156,7 +156,7 @@ func (s *Servidor) resumo(w http.ResponseWriter, r *http.Request) {
 
 	loResu, err := s.dados(r).Resumo(r.Context(), ldDe, ldAte)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (s *Servidor) evolucao(w http.ResponseWriter, r *http.Request) {
 
 	laMese, err := s.dados(r).EvolucaoMensal(r.Context(), lnMese)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 

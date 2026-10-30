@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +25,13 @@ func (s *Servidor) chat(w http.ResponseWriter, r *http.Request) {
 		erroJSON(w, http.StatusServiceUnavailable, "assistente desligado: configure GROQ_API_KEY no .env")
 		return
 	}
+	// a cota gratis da IA e uma so para o site inteiro: um usuario nao pode gastar a de todos
+	lcUsua := strconv.FormatInt(usuarioDe(r).ID, 10)
+	if s.limChat.bloqueado(lcUsua) {
+		erroJSON(w, http.StatusTooManyRequests, "limite de perguntas por hora atingido, tente mais tarde")
+		return
+	}
+	s.limChat.registrar(lcUsua)
 
 	var loCorp struct {
 		Pergunta  string             `json:"pergunta"`
@@ -45,7 +53,9 @@ func (s *Servidor) chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ldInic := time.Now()
-	loResp, err := s.assis(s.dados(r)).Perguntar(r.Context(), loCorp.Historico, lcPerg)
+	ctx, cancelar := context.WithTimeout(r.Context(), 90*time.Second)
+	defer cancelar()
+	loResp, err := s.assis(s.dados(r)).Perguntar(ctx, loCorp.Historico, lcPerg)
 	if err != nil {
 		log.Printf("chat: %v", err)
 		erroJSON(w, http.StatusBadGateway, "o assistente nao conseguiu responder agora, tente de novo")

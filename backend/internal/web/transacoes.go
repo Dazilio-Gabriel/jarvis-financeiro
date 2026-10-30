@@ -48,13 +48,13 @@ func (s *Servidor) listarTransacoes(w http.ResponseWriter, r *http.Request) {
 
 	laTran, err := s.dados(r).Listar(r.Context(), loFilt)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
 	lnTota, err := s.dados(r).Contar(r.Context(), loFilt)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -212,7 +212,7 @@ func (s *Servidor) criarTransacao(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.dados(r).Inserir(r.Context(), &loTran); err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -235,7 +235,7 @@ func (s *Servidor) categorizarTransacao(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := s.dados(r).Categorizar(r.Context(), lnTran, loCorp.CategoriaID); err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 

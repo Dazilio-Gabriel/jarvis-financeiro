@@ -97,7 +97,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 
 	lnInse, lnDupl, err := s.dados(r).InserirLote(r.Context(), laTran)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (s *Servidor) listarImportacoes(w http.ResponseWriter, r *http.Request) {
 
 	laImpo, err := s.dados(r).ListarImportacoes(r.Context(), lnLimi)
 	if err != nil {
-		erroJSON(w, http.StatusInternalServerError, err.Error())
+		erroInterno(w, err)
 		return
 	}
 

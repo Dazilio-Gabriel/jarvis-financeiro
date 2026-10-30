@@ -3,9 +3,12 @@ package web
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
@@ -21,12 +24,19 @@ type Servidor struct {
 	integFami int64                              // familia dona dos dados que chegam pela integracao (n8n)
 	assis     func(assistente.Fonte) Perguntador // nil = chat desligado (sem chave do LLM)
 	limLogi   *limitador                         // senhas erradas por IP
+	limMail   *limitador                         // senhas erradas por conta
 	limCada   *limitador                         // cadastros por IP
+	limConv   *limitador                         // consultas de codigo de convite por IP
+	limChat   *limitador                         // perguntas ao assistente por usuario (cota da IA e de todos)
+	producao  bool                               // HTTPS garantido pela hospedagem: cookie Secure e HSTS sempre
+	donoMail  string                             // unico e-mail que pode assumir a familia 1
 }
 
 func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
 	loServ := &Servidor{repo: poRepo, token: pcToke, integFami: 1,
-		limLogi: novoLimitador(10, 15*time.Minute), limCada: novoLimitador(10, time.Hour)}
+		limLogi: novoLimitador(10, 15*time.Minute), limMail: novoLimitador(10, 15*time.Minute),
+		limCada: novoLimitador(10, time.Hour), limConv: novoLimitador(30, time.Hour),
+		limChat: novoLimitador(40, time.Hour)}
 	if poRepo != nil {
 		loServ.auth = poRepo
 	}
@@ -37,6 +47,12 @@ func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
 // com o repositorio da familia de quem perguntou: o modelo nunca escolhe de quem sao os dados.
 func (s *Servidor) ComAssistente(poFabr func(assistente.Fonte) Perguntador) *Servidor {
 	s.assis = poFabr
+	return s
+}
+
+// ComProducao liga o modo producao e define o e-mail do dono da familia 1
+func (s *Servidor) ComProducao(llProd bool, pcDono string) *Servidor {
+	s.producao, s.donoMail = llProd, strings.TrimSpace(pcDono)
 	return s
 }
 
@@ -54,11 +70,13 @@ func (s *Servidor) Rotas() http.Handler {
 	loMux.HandleFunc("POST /api/auth/cadastro", s.cadastrar)
 	loMux.HandleFunc("POST /api/auth/login", s.entrar)
 	loMux.HandleFunc("POST /api/auth/sair", s.sair)
+	loMux.HandleFunc("GET /api/convite/{codigo}", s.convite)
 
 	// so com login: cada handler enxerga apenas a familia de quem esta logado
 	loPriv := http.NewServeMux()
 	loPriv.HandleFunc("GET /api/auth/eu", s.eu)
 	loPriv.HandleFunc("GET /api/familia", s.familia)
+	loPriv.HandleFunc("POST /api/familia/convite", s.novoConvite)
 
 	loPriv.HandleFunc("GET /api/categorias", s.listarCategorias)
 	loPriv.HandleFunc("PUT /api/categorias/{id}/orcamento", s.salvarOrcamento)
@@ -80,7 +98,7 @@ func (s *Servidor) Rotas() http.Handler {
 	loPriv.HandleFunc("GET /api/importacoes", s.listarImportacoes)
 
 	loProt := s.exigirLogin(loPriv)
-	for _, lcRota := range []string{"/api/auth/eu", "/api/familia", "/api/categorias", "/api/categorias/",
+	for _, lcRota := range []string{"/api/auth/eu", "/api/familia", "/api/familia/", "/api/categorias", "/api/categorias/",
 		"/api/regras", "/api/transacoes", "/api/transacoes/", "/api/resumo", "/api/evolucao",
 		"/api/estatisticas", "/api/chat", "/api/importar", "/api/importacoes"} {
 		loMux.Handle(lcRota, loProt)
@@ -97,18 +115,64 @@ func (s *Servidor) Rotas() http.Handler {
 	})
 	loMux.Handle("/", frontend())
 
-	return cabecalhosSeguranca(logar(loMux))
+	return s.cabecalhosSeguranca(logar(barrarOutroSite(limitarCorpo(loMux))))
 }
 
+// CSP: so codigo e estilo do proprio site. Mesmo que um dia entre um XSS (descricao de extrato
+// maliciosa), o navegador recusa script de fora e envio de dado para outro dominio.
+const cCSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+	"connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; " +
+	"form-action 'self'; frame-ancestors 'none'"
+
 // cabecalhosSeguranca: o basico que todo site com dado pessoal deve mandar
-func cabecalhosSeguranca(poProx http.Handler) http.Handler {
+func (s *Servidor) cabecalhosSeguranca(poProx http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		loCabe := w.Header()
 		loCabe.Set("X-Content-Type-Options", "nosniff")
 		loCabe.Set("X-Frame-Options", "DENY")
 		loCabe.Set("Referrer-Policy", "same-origin")
-		if https(r) {
-			loCabe.Set("Strict-Transport-Security", "max-age=31536000")
+		loCabe.Set("Content-Security-Policy", cCSP)
+		loCabe.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+		loCabe.Set("Cross-Origin-Opener-Policy", "same-origin")
+		if s.https(r) {
+			loCabe.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
+		poProx.ServeHTTP(w, r)
+	})
+}
+
+// barrarOutroSite e a defesa de CSRF: requisicao que muda dado (nao-GET) vinda de pagina de
+// outro site e recusada. Cobre o "login CSRF" (form text/plain de outro site logando a vitima
+// na conta do atacante), que o SameSite=Lax sozinho nao barra.
+func barrarOutroSite(poProx http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && strings.HasPrefix(r.URL.Path, "/api/") &&
+			!strings.HasPrefix(r.URL.Path, "/api/integracao/") {
+			// navegador moderno diz de onde veio; "none" e o usuario digitando/abrindo direto
+			switch r.Header.Get("Sec-Fetch-Site") {
+			case "", "same-origin", "none":
+			default:
+				erroJSON(w, http.StatusForbidden, "requisição de outro site recusada")
+				return
+			}
+			// navegador antigo sem Sec-Fetch-Site: compara a Origin com o proprio host
+			if lcOrig := r.Header.Get("Origin"); lcOrig != "" {
+				if loURL, err := url.Parse(lcOrig); err != nil || loURL.Host != r.Host {
+					erroJSON(w, http.StatusForbidden, "requisição de outro site recusada")
+					return
+				}
+			}
+		}
+		poProx.ServeHTTP(w, r)
+	})
+}
+
+// limitarCorpo poe teto no corpo de toda requisicao: JSON gigante derrubaria o servidor por memoria.
+// O upload de CSV tem o proprio limite (8 MB) no handler.
+func limitarCorpo(poProx http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/importar" {
+			r.Body = http.MaxBytesReader(w, r.Body, 128<<10)
 		}
 		poProx.ServeHTTP(w, r)
 	})
@@ -142,7 +206,8 @@ func (s *Servidor) exigirToken(poProx http.Handler) http.Handler {
 			erroJSON(w, http.StatusServiceUnavailable, "API_TOKEN nao configurado no servidor")
 			return
 		}
-		if r.Header.Get("X-API-Token") != s.token {
+		// comparacao em tempo constante: o tempo de resposta nao entrega quantos caracteres acertou
+		if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-API-Token")), []byte(s.token)) != 1 {
 			erroJSON(w, http.StatusUnauthorized, "token invalido")
 			return
 		}
@@ -156,7 +221,8 @@ func (s *Servidor) saude(w http.ResponseWriter, r *http.Request) {
 	if s.repo == nil {
 		lcBanc = "sem banco"
 	} else if err := s.repo.Ping(r.Context()); err != nil {
-		lcBanc = "erro: " + err.Error()
+		log.Printf("saude: %v", err) // detalhe so no log: a rota e publica e o erro traz o host do banco
+		lcBanc = "indisponivel"
 	}
 	responderJSON(w, http.StatusOK, map[string]string{"status": "ok", "banco": lcBanc})
 }
@@ -173,4 +239,11 @@ func responderJSON(w http.ResponseWriter, pnStat int, poCorp any) {
 
 func erroJSON(w http.ResponseWriter, pnStat int, pcMens string) {
 	responderJSON(w, pnStat, map[string]string{"erro": pcMens})
+}
+
+// erroInterno registra o detalhe no log e devolve mensagem generica: erro de banco traz nome de
+// coluna, host e usuario, que nao sao da conta de quem esta do outro lado
+func erroInterno(w http.ResponseWriter, err error) {
+	log.Printf("erro interno: %v", err)
+	erroJSON(w, http.StatusInternalServerError, "erro interno, tente de novo")
 }

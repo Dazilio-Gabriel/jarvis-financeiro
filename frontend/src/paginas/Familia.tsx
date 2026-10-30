@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { buscarFamilia } from '../api'
+import { buscarFamilia, gerarNovoConvite } from '../api'
 import { Cabecalho, Cartao, Carregando, Erro } from '../componentes/Base'
 import { useBusca } from '../util'
 
 export default function Familia() {
   const [familia, recarregar] = useBusca((s) => buscarFamilia(s))
   const [copiado, setCopiado] = useState(false)
+  const [trocando, setTrocando] = useState(false)
 
   if (familia.fase === 'carregando') return <Carregando linhas={3} />
   if (familia.fase === 'erro') return <Erro mensagem={familia.mensagem} aoTentar={recarregar} />
@@ -20,6 +21,18 @@ export default function Familia() {
       setTimeout(() => setCopiado(false), 2000)
     } catch {
       // navegador sem permissao de area de transferencia: o link continua visivel para copiar a mao
+    }
+  }
+
+  // novo codigo invalida o link antigo: para quando ele vazou ou alguem saiu da familia
+  async function trocarCodigo() {
+    if (!confirm('Gerar um código novo? O link atual para de funcionar.')) return
+    setTrocando(true)
+    try {
+      await gerarNovoConvite()
+      recarregar()
+    } finally {
+      setTrocando(false)
     }
   }
 
@@ -41,6 +54,9 @@ export default function Familia() {
           <input readOnly value={link} onFocus={(e) => e.target.select()} />
           <button className="botao primario" onClick={copiar}>
             {copiado ? 'copiado!' : 'copiar link'}
+          </button>
+          <button className="botao" onClick={trocarCodigo} disabled={trocando}>
+            gerar novo código
           </button>
         </div>
       </Cartao>

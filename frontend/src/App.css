@@ -1458,6 +1458,25 @@ code {
   font-size: 0.85rem;
 }
 
+.aviso-convite {
+  border: 1px solid var(--amarelo-borda);
+  background: var(--sup-amarelo);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.aviso-convite p {
+  margin: 0 0 0.4rem;
+}
+
+.confirma {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
 .usuario {
   display: flex;
   align-items: center;

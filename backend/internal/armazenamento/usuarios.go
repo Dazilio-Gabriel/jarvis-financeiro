@@ -49,9 +49,10 @@ func gerarConvite() (string, error) {
 
 // Cadastrar cria o usuario. Regras da familia, nesta ordem:
 //   - com codigo de convite: entra na familia dona do codigo;
-//   - primeiro usuario do sistema: assume a familia 1, que ja tem os dados importados antes do login existir;
+//   - primeiro usuario do sistema E llDono: assume a familia 1, que ja tem os dados importados
+//     antes do login existir (quem decide se o e-mail e o do dono e a camada web, pelo DONO_EMAIL);
 //   - senao: cria uma familia nova, com as categorias iniciais.
-func (m *MySQL) Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv string) (Usuario, error) {
+func (m *MySQL) Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv string, llDono bool) (Usuario, error) {
 	loTx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Usuario{}, err
@@ -71,14 +72,14 @@ func (m *MySQL) Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv st
 		}
 
 	default:
+		// trava a familia 1 ANTES de contar: dois cadastros simultaneos nao caem os dois nela
+		var lnExis int64
+		errF := loTx.QueryRowContext(ctx, `SELECT id FROM familias WHERE id = 1 FOR UPDATE`).Scan(&lnExis)
 		var lnUsua int
-		// FOR UPDATE na familia 1 serializa dois cadastros simultaneos disputando ela
 		if err := loTx.QueryRowContext(ctx, `SELECT COUNT(*) FROM usuarios`).Scan(&lnUsua); err != nil {
 			return Usuario{}, err
 		}
-		var lnExis int64
-		errF := loTx.QueryRowContext(ctx, `SELECT id FROM familias WHERE id = 1 FOR UPDATE`).Scan(&lnExis)
-		if lnUsua == 0 && errF == nil {
+		if lnUsua == 0 && errF == nil && llDono {
 			lnFami = 1
 		} else {
 			lnFami, err = criarFamilia(ctx, loTx, "Família de "+primeiroNome(pcNome))
@@ -212,4 +213,26 @@ func (m *MySQL) Membros(ctx context.Context, pnFami int64) ([]Usuario, error) {
 		laUsua = append(laUsua, loUsua)
 	}
 	return laUsua, loRows.Err()
+}
+
+// FamiliaDoConvite devolve so o nome da familia do codigo: a tela mostra em qual familia a
+// pessoa vai entrar antes de ela confirmar (link de convite de golpista vira visivel)
+func (m *MySQL) FamiliaDoConvite(ctx context.Context, pcConv string) (string, error) {
+	var lcNome string
+	err := m.db.QueryRowContext(ctx, `SELECT nome FROM familias WHERE codigo_convite = ?`,
+		strings.ToUpper(strings.TrimSpace(pcConv))).Scan(&lcNome)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrConviteInvalido
+	}
+	return lcNome, err
+}
+
+// NovoConvite troca o codigo da familia: o link antigo para de funcionar
+func (m *MySQL) NovoConvite(ctx context.Context, pnFami int64) (string, error) {
+	lcConv, err := gerarConvite()
+	if err != nil {
+		return "", err
+	}
+	_, err = m.db.ExecContext(ctx, `UPDATE familias SET codigo_convite = ? WHERE id = ?`, lcConv, pnFami)
+	return lcConv, err
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,6 +35,7 @@ type authFalso struct {
 	usuarios map[string]armazenamento.Usuario // por e-mail
 	senhas   map[string]string
 	sessoes  map[string]armazenamento.Usuario
+	dono     bool // o ultimo cadastro podia assumir a familia 1?
 }
 
 func novoAuthFalso() *authFalso {
@@ -41,7 +43,19 @@ func novoAuthFalso() *authFalso {
 		sessoes: map[string]armazenamento.Usuario{hashToken("tok-1"): {ID: 1, FamiliaID: 10, Nome: "Ana"}}}
 }
 
-func (a *authFalso) Cadastrar(_ context.Context, pcNome, pcMail, pcHash, pcConv string) (armazenamento.Usuario, error) {
+func (a *authFalso) FamiliaDoConvite(_ context.Context, pcConv string) (string, error) {
+	if pcConv == "CONVITE123" {
+		return "Família da Ana", nil
+	}
+	return "", armazenamento.ErrConviteInvalido
+}
+
+func (a *authFalso) NovoConvite(context.Context, int64) (string, error) {
+	return "NOVO123456", nil
+}
+
+func (a *authFalso) Cadastrar(_ context.Context, pcNome, pcMail, pcHash, pcConv string, llDono bool) (armazenamento.Usuario, error) {
+	a.dono = llDono
 	if _, llExis := a.usuarios[pcMail]; llExis {
 		return armazenamento.Usuario{}, armazenamento.ErrEmailEmUso
 	}
@@ -283,5 +297,125 @@ func TestApiDesconhecidaEFrontendSemBuild(t *testing.T) {
 	loRec := pedir(loServ, http.MethodGet, "/dashboard", "", "")
 	if loRec.Header().Get("X-Frame-Options") != "DENY" {
 		t.Error("sem cabecalhos de seguranca")
+	}
+}
+
+func TestSoODonoAssumeAFamilia1(t *testing.T) {
+	casos := []struct {
+		nome        string
+		producao    bool
+		dono, email string
+		podeAssumir bool
+	}{
+		{"dev sem dono configurado", false, "", "qualquer@x.com", true},
+		{"producao sem dono: ninguem", true, "", "qualquer@x.com", false},
+		{"producao, e-mail do dono", true, "Gabriel@X.com", "gabriel@x.com", true},
+		{"producao, estranho", true, "gabriel@x.com", "estranho@x.com", false},
+	}
+	for _, c := range casos {
+		loServ, loAuth := servidorTeste(nil)
+		loServ.ComProducao(c.producao, c.dono)
+		pedir(loServ, http.MethodPost, "/api/auth/cadastro",
+			`{"nome":"X","email":"`+c.email+`","senha":"senha-qualquer"}`, "")
+		if loAuth.dono != c.podeAssumir {
+			t.Errorf("%s: podeAssumir = %v, esperado %v", c.nome, loAuth.dono, c.podeAssumir)
+		}
+	}
+}
+
+func TestCabecalhosConviteECookieEmProducao(t *testing.T) {
+	loServ, _ := servidorTeste(nil)
+	loServ.ComProducao(true, "")
+
+	loRec := pedir(loServ, http.MethodGet, "/api/convite/CONVITE123", "", "")
+	if loRec.Code != http.StatusOK || !strings.Contains(loRec.Body.String(), "Família da Ana") {
+		t.Errorf("convite valido: %d %s", loRec.Code, loRec.Body)
+	}
+	loCabe := loRec.Header()
+	if !strings.Contains(loCabe.Get("Content-Security-Policy"), "default-src 'self'") ||
+		!strings.Contains(loCabe.Get("Strict-Transport-Security"), "includeSubDomains") {
+		t.Errorf("cabecalhos de seguranca em producao = %v", loCabe)
+	}
+	if loRec := pedir(loServ, http.MethodGet, "/api/convite/CHUTE", "", ""); loRec.Code != http.StatusNotFound {
+		t.Errorf("convite invalido: %d", loRec.Code)
+	}
+
+	// em producao o cookie e Secure mesmo sem X-Forwarded-Proto
+	loRec = pedir(loServ, http.MethodPost, "/api/auth/cadastro", `{"nome":"Y","email":"y@x.com","senha":"senha-qualquer"}`, "")
+	if loCook := loRec.Result().Cookies(); len(loCook) != 1 || !loCook[0].Secure {
+		t.Errorf("cookie em producao sem Secure: %+v", loCook)
+	}
+}
+
+func TestBarraRequisicaoDeOutroSite(t *testing.T) {
+	loServ, _ := servidorTeste(nil)
+	casos := []struct {
+		nome, cabe, valor string
+		barra             bool
+	}{
+		{"form de outro site (login CSRF)", "Sec-Fetch-Site", "cross-site", true},
+		{"subdominio irmao", "Sec-Fetch-Site", "same-site", true},
+		{"navegador antigo, Origin de fora", "Origin", "https://golpe.example", true},
+		{"o proprio site", "Sec-Fetch-Site", "same-origin", false},
+		{"Origin do proprio host", "Origin", "http://example.com", false},
+	}
+	for _, c := range casos {
+		loReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"email":"a@b.com","senha":"x"}`))
+		loReq.Header.Set(c.cabe, c.valor)
+		loRec := httptest.NewRecorder()
+		loServ.Rotas().ServeHTTP(loRec, loReq)
+		if (loRec.Code == http.StatusForbidden) != c.barra {
+			t.Errorf("%s: status %d", c.nome, loRec.Code)
+		}
+	}
+}
+
+func TestIPForjadoNaoFogeDoLimite(t *testing.T) {
+	loServ, _ := servidorTeste(nil)
+	lnBarr := 0
+	for i := range 15 {
+		loReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"email":"alvo@x.com","senha":"chute-123"}`))
+		// atacante inventa um IP novo a cada tentativa; o proxy anexa o IP real no fim
+		loReq.Header.Set("X-Forwarded-For", fmt.Sprintf("10.0.0.%d, 200.1.1.1", i))
+		loRec := httptest.NewRecorder()
+		loServ.Rotas().ServeHTTP(loRec, loReq)
+		if loRec.Code == http.StatusTooManyRequests {
+			lnBarr++
+		}
+	}
+	if lnBarr == 0 {
+		t.Error("15 chutes com IP forjado e nenhum bloqueio")
+	}
+}
+
+func TestCorpoGiganteRecusado(t *testing.T) {
+	loServ, _ := servidorTeste(&assistenteFalso{})
+	lcCorp := `{"pergunta":"oi","historico":[{"papel":"usuario","conteudo":"` + strings.Repeat("a", 200<<10) + `"}]}`
+	if loRec := pedir(loServ, http.MethodPost, "/api/chat", lcCorp, "tok-1"); loRec.Code != http.StatusBadRequest {
+		t.Errorf("corpo de 200 KB: status %d, esperado 400", loRec.Code)
+	}
+}
+
+// ataques pela URL: path traversal tentando ler arquivo do servidor, e rota de API inventada
+func TestAtaquesPelaURL(t *testing.T) {
+	loServ, _ := servidorTeste(nil)
+	for _, lcRota := range []string{
+		"/../../etc/passwd",
+		"/%2e%2e/%2e%2e/go.mod",
+		"/..%2f..%2fgo.mod",
+		"/assets/../../../../windows/win.ini",
+		"/api/../go.mod",
+	} {
+		loRec := pedir(loServ, http.MethodGet, lcRota, "", "")
+		lcCorp := loRec.Body.String()
+		if strings.Contains(lcCorp, "module github.com") || strings.Contains(lcCorp, "root:") ||
+			strings.Contains(lcCorp, "[fonts]") {
+			t.Errorf("%s vazou arquivo do servidor: %.80q", lcRota, lcCorp)
+		}
+	}
+
+	// id na URL que nao e numero nao chega no banco
+	if loRec := pedir(loServ, http.MethodPut, "/api/transacoes/1%20OR%201=1/categoria", `{}`, "tok-1"); loRec.Code != http.StatusBadRequest {
+		t.Errorf("id com SQL na URL: status %d, esperado 400", loRec.Code)
 	}
 }

@@ -8,6 +8,7 @@ Backend em **Go**, frontend em **React + TypeScript**, banco **MySQL**. O projet
 veículo para aprender Go de verdade.
 
 > **Uso na nuvem (usuários, Render, TiDB, IA grátis):** ver [docs/NUVEM.md](docs/NUVEM.md).
+> **Segurança (revisão, correções, testes de ataque):** ver [docs/SEGURANCA.md](docs/SEGURANCA.md).
 >
 > **Status:** Fases 0 a 4 funcionando — servidor, domínio, MySQL, importação de CSV, API REST,
 > as telas e o **chat com LLM via tool calling**, com testes, CI e eval. Ver [ROADMAP.md](ROADMAP.md).

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { cadastrar, entrar, type Usuario } from '../api'
+import { useEffect, useState } from 'react'
+import { cadastrar, consultarConvite, entrar, type Usuario } from '../api'
 
 type Modo = 'entrar' | 'cadastrar'
 
@@ -12,9 +12,31 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
   const [convite, setConvite] = useState(() => new URLSearchParams(location.search).get('convite') ?? '')
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
+  // nome da familia do convite: quem recebe um link sabe em qual familia vai entrar antes de
+  // confirmar (sem isso, um golpista mandaria o proprio convite e leria os extratos da vitima)
+  // guardados junto com o codigo a que se referem: trocou o codigo, o nome e a confirmacao caem
+  const [consulta, setConsulta] = useState({ codigo: '', familia: '' })
+  const [confirmadoPara, setConfirmadoPara] = useState('')
+  const codigo = convite.trim()
+  const familiaConvite = consulta.codigo === codigo ? consulta.familia : ''
+  const conviteConfirmado = confirmadoPara === codigo
+  const setConviteConfirmado = (llMarc: boolean) => setConfirmadoPara(llMarc ? codigo : '')
+
+  useEffect(() => {
+    if (modo !== 'cadastrar' || codigo.length < 6) return
+    const controle = new AbortController()
+    consultarConvite(codigo, controle.signal)
+      .then((r) => setConsulta({ codigo, familia: r.familia }))
+      .catch(() => setConsulta({ codigo, familia: '' }))
+    return () => controle.abort()
+  }, [codigo, modo])
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
+    if (modo === 'cadastrar' && codigo && !conviteConfirmado) {
+      setErro('confirme que conhece quem enviou o convite, ou apague o código')
+      return
+    }
     setErro('')
     setEnviando(true)
     try {
@@ -91,6 +113,29 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
                 placeholder="para entrar na família de alguém"
               />
             </label>
+          )}
+
+          {modo === 'cadastrar' && codigo && (
+            <div className="aviso-convite">
+              {familiaConvite ? (
+                <>
+                  <p>
+                    Você vai entrar na <strong>{familiaConvite}</strong>. Todos os membros dela vão ver os
+                    lançamentos e as faturas que você importar.
+                  </p>
+                  <label className="confirma">
+                    <input
+                      type="checkbox"
+                      checked={conviteConfirmado}
+                      onChange={(e) => setConviteConfirmado(e.target.checked)}
+                    />
+                    conheço quem me enviou este convite
+                  </label>
+                </>
+              ) : (
+                <p>Código de convite não encontrado. Apague-o para criar uma família só sua.</p>
+              )}
+            </div>
           )}
 
           {erro && <p className="entrar-erro">{erro}</p>}
