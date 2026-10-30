@@ -3,7 +3,10 @@ package armazenamento
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 )
 
 // RegistrarUsoIA soma uma pergunta e os tokens dela no dia do usuario
@@ -117,4 +120,54 @@ func (m *MySQL) serieDia(ctx context.Context, pcSQL string, pdDesd time.Time) ([
 		laPont = append(laPont, loPont)
 	}
 	return laPont, loRows.Err()
+}
+
+// NormalizarCores da cor propria a toda categoria que repete cor dentro da familia (ex.: tres
+// categorias criadas pelo usuario com o mesmo tom). Roda na subida; sem repeticao, nao faz nada.
+func (m *MySQL) NormalizarCores(ctx context.Context) (int, error) {
+	loRows, err := m.db.QueryContext(ctx, `SELECT id, familia_id, nome, COALESCE(cor, '') FROM categorias ORDER BY familia_id, id`)
+	if err != nil {
+		return 0, fmt.Errorf("normalizar cores: %w", err)
+	}
+	loPorF := map[int64][]financas.Categoria{}
+	laOrde := []int64{}
+	for loRows.Next() {
+		var (
+			loCate financas.Categoria
+			lnFami int64
+		)
+		if err := loRows.Scan(&loCate.ID, &lnFami, &loCate.Nome, &loCate.Cor); err != nil {
+			loRows.Close()
+			return 0, err
+		}
+		if _, llExis := loPorF[lnFami]; !llExis {
+			laOrde = append(laOrde, lnFami)
+		}
+		loPorF[lnFami] = append(loPorF[lnFami], loCate)
+	}
+	loRows.Close()
+
+	lnTroc := 0
+	for _, lnFami := range laOrde {
+		laCate := loPorF[lnFami]
+		loVist := map[string]bool{}
+		laMant := []financas.Categoria{} // as que ficam com a cor que ja tem
+		for i, loCate := range laCate {
+			lcCor := strings.ToLower(loCate.Cor)
+			if lcCor != "" && !loVist[lcCor] {
+				loVist[lcCor] = true
+				laMant = append(laMant, loCate)
+				continue
+			}
+			lcNova := financas.ProximaCor(laMant)
+			if _, err := m.db.ExecContext(ctx, `UPDATE categorias SET cor = ? WHERE id = ?`, lcNova, loCate.ID); err != nil {
+				return lnTroc, err
+			}
+			laCate[i].Cor = lcNova
+			loVist[lcNova] = true
+			laMant = append(laMant, laCate[i])
+			lnTroc++
+		}
+	}
+	return lnTroc, nil
 }

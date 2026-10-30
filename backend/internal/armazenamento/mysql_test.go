@@ -247,6 +247,25 @@ func TestIntegracaoGooglePainel(t *testing.T) {
 		t.Errorf("Google pelo sub: %+v, %v", loDeNo, err)
 	}
 
+	// tres categorias novas com a mesma cor: a normalizacao da uma cor para cada
+	loFami := loRepo.Familia(loSenh.FamiliaID)
+	for _, lcNome := range []string{"IPTU", "Jogos", "Divida"} {
+		if _, err := loFami.CriarCategoria(ctx, lcNome, "#0f9bb0"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := loRepo.NormalizarCores(ctx); err != nil {
+		t.Fatal(err)
+	}
+	laCate, _ := loFami.ListarCategorias(ctx)
+	loCore := map[string]string{}
+	for _, loCate := range laCate {
+		if lcOutr, llRepe := loCore[loCate.Cor]; llRepe {
+			t.Errorf("%s e %s com a mesma cor %s", lcOutr, loCate.Nome, loCate.Cor)
+		}
+		loCore[loCate.Cor] = loCate.Nome
+	}
+
 	if err := loRepo.RegistrarUsoIA(ctx, loSenh.ID, 1500); err != nil {
 		t.Fatal(err)
 	}

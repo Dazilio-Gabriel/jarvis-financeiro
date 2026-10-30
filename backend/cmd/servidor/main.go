@@ -50,6 +50,11 @@ func main() {
 		}
 		log.Printf("migrations aplicadas agora: %v", laApli)
 	}
+	if lnTroc, err := loRepo.NormalizarCores(ctxConn); err != nil {
+		log.Printf("normalizar cores: %v", err) // cosmetico: nao impede a subida
+	} else if lnTroc > 0 {
+		log.Printf("cores de categoria ajustadas: %d", lnTroc)
+	}
 
 	loWeb := web.NovoServidor(loRepo, loConf.APIToken).
 		ComFamiliaIntegracao(loConf.IntegFami).
