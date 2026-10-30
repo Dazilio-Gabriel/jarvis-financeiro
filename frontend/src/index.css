@@ -49,3 +49,20 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
+
+/* Lista de opcoes do <select>: o Windows desenha a caixa nativa com fundo branco e ela herdava o
+   texto claro do tema, ficando ilegivel. Fundo e texto explicitos em todo seletor do site. */
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: var(--sup);
+  color: var(--txt);
+}
+
+select option:checked {
+  background-color: var(--verde-borda);
+  color: var(--txt);
+}
