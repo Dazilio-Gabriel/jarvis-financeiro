@@ -138,8 +138,8 @@ func (m *MySQL) InserirLote(ctx context.Context, paTran []financas.Transacao) (i
 	// prepared statement reaproveitado por todo o lote: o banco compila o SQL uma vez so
 	loStmt, err := loTx.PrepareContext(ctx, `
 		INSERT IGNORE INTO transacoes
-			(data, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+			(data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, 0, fmt.Errorf("preparar insert: %w", err)
 	}
@@ -157,7 +157,7 @@ func (m *MySQL) InserirLote(ctx context.Context, paTran []financas.Transacao) (i
 		}
 
 		loRes, err := loStmt.ExecContext(ctx,
-			loTran.Data, loTran.Descricao, int64(loTran.Valor), string(loTran.Tipo),
+			loTran.Data, loTran.Referencia(), loTran.Descricao, int64(loTran.Valor), string(loTran.Tipo),
 			loCate, loTran.Conta, loTran.Pessoa, loTran.Fonte, loTran.HashExterno)
 		if err != nil {
 			return 0, 0, fmt.Errorf("inserir transacao %q: %w", loTran.Descricao, err)
@@ -190,9 +190,9 @@ func (m *MySQL) Inserir(ctx context.Context, poTran *financas.Transacao) error {
 
 	loRes, err := m.db.ExecContext(ctx, `
 		INSERT INTO transacoes
-			(data, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		poTran.Data, poTran.Descricao, int64(poTran.Valor), string(poTran.Tipo),
+			(data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa, fonte, hash_externo)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		poTran.Data, poTran.Referencia(), poTran.Descricao, int64(poTran.Valor), string(poTran.Tipo),
 		loCate, poTran.Conta, poTran.Pessoa, poTran.Fonte, poTran.HashExterno)
 	if err != nil {
 		return fmt.Errorf("inserir transacao: %w", err)
@@ -205,15 +205,19 @@ func (m *MySQL) Inserir(ctx context.Context, poTran *financas.Transacao) error {
 func (m *MySQL) Listar(ctx context.Context, poFilt financas.Filtro) ([]financas.Transacao, error) {
 	lcSQL, laArgs := montarWhere(poFilt)
 
-	lnLimi := poFilt.Limite
-	if lnLimi <= 0 || lnLimi > 500 {
-		lnLimi = 100
-	}
-
-	lcSQL = `SELECT id, data, descricao, valor_centavos, tipo, categoria_id, conta, pessoa,
+	lcSQL = `SELECT id, data, mes_ref, descricao, valor_centavos, tipo, categoria_id, conta, pessoa,
 	                fonte, hash_externo, criado_em
-	         FROM transacoes` + lcSQL + ` ORDER BY data DESC, id DESC LIMIT ? OFFSET ?`
-	laArgs = append(laArgs, lnLimi, poFilt.Offset)
+	         FROM transacoes` + lcSQL + ` ORDER BY data DESC, id DESC`
+
+	// SemLimite e para agregacao interna (estatisticas do mes); a API publica segue paginada
+	if !poFilt.SemLimite {
+		lnLimi := poFilt.Limite
+		if lnLimi <= 0 || lnLimi > 500 {
+			lnLimi = 100
+		}
+		lcSQL += ` LIMIT ? OFFSET ?`
+		laArgs = append(laArgs, lnLimi, poFilt.Offset)
+	}
 
 	loRows, err := m.db.QueryContext(ctx, lcSQL, laArgs...)
 	if err != nil {
@@ -231,7 +235,7 @@ func (m *MySQL) Listar(ctx context.Context, poFilt financas.Filtro) ([]financas.
 			lnValo int64
 			lcTipo string
 		)
-		err := loRows.Scan(&loTran.ID, &loTran.Data, &loTran.Descricao, &lnValo, &lcTipo,
+		err := loRows.Scan(&loTran.ID, &loTran.Data, &loTran.MesRef, &loTran.Descricao, &lnValo, &lcTipo,
 			&lnCate, &lcCont, &lcPess, &loTran.Fonte, &loTran.HashExterno, &loTran.CriadoEm)
 		if err != nil {
 			return nil, fmt.Errorf("ler transacao: %w", err)
@@ -290,12 +294,13 @@ func montarWhere(poFilt financas.Filtro) (string, []any) {
 	laCond := []string{}
 	laArgs := []any{}
 
+	lcColu := colunaPeriodo(poFilt.De, poFilt.Ate)
 	if !poFilt.De.IsZero() {
-		laCond = append(laCond, "data >= ?")
+		laCond = append(laCond, lcColu+" >= ?")
 		laArgs = append(laArgs, poFilt.De)
 	}
 	if !poFilt.Ate.IsZero() {
-		laCond = append(laCond, "data <= ?")
+		laCond = append(laCond, lcColu+" <= ?")
 		laArgs = append(laArgs, poFilt.Ate)
 	}
 	if poFilt.CategoriaID != nil {
@@ -325,6 +330,18 @@ func montarWhere(poFilt financas.Filtro) (string, []any) {
 	return " WHERE " + strings.Join(laCond, " AND "), laArgs
 }
 
+// colunaPeriodo: periodo de meses inteiros filtra pelo mes de referencia (a fatura de novembro
+// conta em novembro); periodo quebrado ("de 05 a 20/10") filtra pela data da compra.
+func colunaPeriodo(pdDe, pdAte time.Time) string {
+	if pdDe.IsZero() || pdAte.IsZero() {
+		return "data"
+	}
+	if pdDe.Day() == 1 && pdAte.AddDate(0, 0, 1).Day() == 1 {
+		return "mes_ref"
+	}
+	return "data"
+}
+
 // ============================================================ RESUMO
 
 func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Resumo, error) {
@@ -336,7 +353,7 @@ func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Res
 			COALESCE(SUM(CASE WHEN tipo = 'credito' THEN valor_centavos ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN tipo = 'debito'  THEN ABS(valor_centavos) ELSE 0 END), 0),
 			COUNT(*)
-		FROM transacoes WHERE data >= ? AND data <= ?`, pdDe, pdAte).
+		FROM transacoes WHERE `+colunaPeriodo(pdDe, pdAte)+` >= ? AND `+colunaPeriodo(pdDe, pdAte)+` <= ?`, pdDe, pdAte).
 		Scan(&loResu.Entradas, &loResu.Saidas, &loResu.Transacoes)
 	if err != nil {
 		return loResu, fmt.Errorf("resumo totais: %w", err)
@@ -352,7 +369,7 @@ func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Res
 		       COUNT(*)
 		FROM transacoes t
 		LEFT JOIN categorias c ON c.id = t.categoria_id
-		WHERE t.data >= ? AND t.data <= ? AND t.tipo = 'debito'
+		WHERE t.`+colunaPeriodo(pdDe, pdAte)+` >= ? AND t.`+colunaPeriodo(pdDe, pdAte)+` <= ? AND t.tipo = 'debito'
 		GROUP BY t.categoria_id, c.nome, c.cor, c.orcamento_centavos
 		ORDER BY SUM(ABS(t.valor_centavos)) DESC`, pdDe, pdAte)
 	if err != nil {
@@ -387,13 +404,13 @@ func (m *MySQL) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.Res
 // EvolucaoMensal devolve o total de saidas por mes nos ultimos pnMese meses
 func (m *MySQL) EvolucaoMensal(ctx context.Context, pnMese int) ([]financas.ResumoCategoria, error) {
 	loRows, err := m.db.QueryContext(ctx, `
-		SELECT DATE_FORMAT(data, '%m/%Y'),
+		SELECT DATE_FORMAT(mes_ref, '%m/%Y'),
 		       SUM(CASE WHEN tipo = 'debito' THEN ABS(valor_centavos) ELSE 0 END),
 		       COUNT(*)
 		FROM transacoes
-		WHERE data >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
-		GROUP BY YEAR(data), MONTH(data), DATE_FORMAT(data, '%m/%Y')
-		ORDER BY YEAR(data), MONTH(data)`, pnMese)
+		WHERE mes_ref >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
+		GROUP BY mes_ref
+		ORDER BY mes_ref`, pnMese)
 	if err != nil {
 		return nil, fmt.Errorf("evolucao mensal: %w", err)
 	}

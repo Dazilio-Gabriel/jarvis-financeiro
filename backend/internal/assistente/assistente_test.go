@@ -178,6 +178,7 @@ func TestExecutarFerramentas(t *testing.T) {
 		{"listar", "listar_categorias", ``, `"orcamento":"R$ 500,00"`},
 		{"comparar", "comparar_meses", `{"mes_a":"2026-09","mes_b":"2026-08"}`, `"mes_antes":"2026-08"`},
 		{"comparar igual", "comparar_meses", `{"mes_a":"2026-08","mes_b":"2026-09"}`, `"variacao_total":"sem variação"`},
+		{"estabelecimento", "gasto_por_estabelecimento", `{"mes":"2026-09","busca":"ignore"}`, `"total":"R$ 45,90"`},
 		{"desconhecida", "apagar_tudo", `{}`, `ferramenta desconhecida`},
 		{"json quebrado", "listar_categorias", `{`, `argumentos invalidos`},
 	}

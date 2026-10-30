@@ -127,6 +127,7 @@ o binário Go serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa d
 | `/importar` | envio de CSV com conferência antes de gravar e histórico de importações |
 | `/categorias` | meta mensal por categoria e regras de categorização automática |
 | `/chat` | assistente: perguntas em português sobre os gastos, respondidas via tool calling |
+| `/estatisticas` | por mês: gasto por categoria (rosca), onde mais gastou ("no BH gastei X"), comparação com o mês anterior, ticket médio, compras parceladas com o que falta pagar, evolução de 6 meses |
 
 ---
 
@@ -149,6 +150,7 @@ impediria ordenar e somar no cliente.
 | GET/POST | `/api/regras` | regras de categorização |
 | POST | `/api/importar` | upload de CSV (multipart) |
 | GET | `/api/importacoes` | histórico de importações |
+| GET | `/api/estatisticas` | estatísticas do mês (`?mes=AAAA-MM`): categorias, estabelecimentos, parcelas, evolução |
 | POST | `/api/chat` | pergunta ao assistente (`{"pergunta": "...", "historico": [...]}`) |
 
 Superfície protegida por token para automação externa: `/api/integracao/*` —

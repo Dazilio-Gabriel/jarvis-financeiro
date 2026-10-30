@@ -1182,6 +1182,224 @@ code {
   max-width: 42ch;
 }
 
+/* ============================================================= ESTATÍSTICAS */
+
+.cabecalho-acao {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.seletor-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.seletor-mes span {
+  min-width: 11.5rem;
+  text-align: center;
+}
+
+.frase-destaque {
+  margin: 0 0 1rem;
+  color: var(--txt-fraco);
+  font-size: 0.95rem;
+}
+
+.frase-destaque strong {
+  color: var(--txt);
+}
+
+.rosca-bloco {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rosca {
+  width: 190px;
+  height: 190px;
+  flex-shrink: 0;
+}
+
+.rosca-rotulo {
+  fill: var(--txt-fraco);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.rosca-valor {
+  fill: var(--txt);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.legenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.legenda li,
+.tabela-estat td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legenda-nome {
+  flex: 1;
+}
+
+.legenda-pct,
+.num {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.lista-esta,
+.lista-parc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.esta-texto {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.esta-texto em,
+.parc-rodape {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--txt-fraco);
+}
+
+.tabela-rolagem {
+  overflow-x: auto;
+}
+
+.tabela-estat {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.tabela-estat th {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--txt-fraco);
+  font-weight: 600;
+  padding: 0 0.6rem 0.6rem;
+}
+
+.tabela-estat th:first-child {
+  text-align: left;
+}
+
+.tabela-estat td {
+  padding: 0.55rem 0.6rem;
+  border-top: 1px solid var(--borda);
+  text-align: right;
+}
+
+.var.sobe {
+  color: var(--vermelho);
+}
+
+.var.cai {
+  color: var(--verde);
+}
+
+.var.neutra {
+  color: var(--txt-fraco);
+}
+
+.parc-topo,
+.parc-rodape {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.parc-topo {
+  font-size: 0.88rem;
+  margin-bottom: 0.3rem;
+}
+
+.parc-rodape {
+  margin-top: 0.3rem;
+}
+
+.empilhado {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 0.5rem;
+  min-height: 240px;
+}
+
+.emp-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  max-width: 90px;
+}
+
+.emp-pilha {
+  width: 100%;
+  max-width: 54px;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 6px 6px 2px 2px;
+  overflow: hidden;
+  min-height: 2px;
+  opacity: 0.75;
+}
+
+.emp-col.atual .emp-pilha {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--verde-borda);
+}
+
+.emp-valor,
+.emp-mes {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--txt-fraco);
+  white-space: nowrap;
+}
+
 /* ===================================================================== CHAT */
 
 .chat {

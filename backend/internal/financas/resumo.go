@@ -13,6 +13,7 @@ type Filtro struct {
 	Busca       string
 	Limite      int
 	Offset      int
+	SemLimite   bool // so para uso interno: traz o periodo inteiro
 }
 
 // ResumoCategoria e o total gasto numa categoria dentro do periodo

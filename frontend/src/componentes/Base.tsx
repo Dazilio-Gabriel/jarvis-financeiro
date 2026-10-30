@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { fmtBRL, useContador } from '../util'
+import { fmtBRL, rotuloMes, somarMes, useContador } from '../util'
 
 /** Cabecalho de pagina, com titulo grande e rotulo mono em cima. */
 export function Cabecalho({
@@ -145,6 +145,21 @@ export function Vazio({
       <span className="vazio-icone">{icone}</span>
       <h2>{titulo}</h2>
       {children}
+    </div>
+  )
+}
+
+/** Navegacao de mes: ‹ outubro de 2026 › */
+export function SeletorMes({ mes, aoMudar }: { mes: string; aoMudar: (mes: string) => void }) {
+  return (
+    <div className="seletor-mes">
+      <button className="botao pequeno" onClick={() => aoMudar(somarMes(mes, -1))} aria-label="mês anterior">
+        ‹
+      </button>
+      <span>{rotuloMes(`${mes}-01`)}</span>
+      <button className="botao pequeno" onClick={() => aoMudar(somarMes(mes, 1))} aria-label="próximo mês">
+        ›
+      </button>
     </div>
   )
 }

@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { buscarEvolucao, buscarResumo, buscarTransacoes } from '../api'
-import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, Vazio } from '../componentes/Base'
-import { fmtBRL, fmtDataCurta, rotuloMes, useBusca } from '../util'
+import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, Vazio } from '../componentes/Base'
+import { fmtBRL, fmtDataCurta, limitesMes, mesAtual, rotuloMes, useBusca } from '../util'
 
 export default function Dashboard() {
-  const [resumo, recarregar] = useBusca((s) => buscarResumo(s))
-  const [ultimas] = useBusca((s) => buscarTransacoes({ limite: 8 }, s))
+  // mes de referencia: na fatura do cartao, o da fatura (nao o do dia da compra)
+  const [mes, setMes] = useState(mesAtual())
+  const { de, ate } = limitesMes(mes)
+  const [resumo, recarregar] = useBusca((s) => buscarResumo(s, de, ate), [mes])
+  const [ultimas] = useBusca((s) => buscarTransacoes({ limite: 8, de, ate }, s), [mes])
   const [evolucao] = useBusca((s) => buscarEvolucao(s, 6))
 
   if (resumo.fase === 'carregando') {
@@ -52,9 +56,12 @@ export default function Dashboard() {
             : `${r.transacoes} lançamentos em ${r.por_categoria.length} categorias`
         }
         acao={
-          <NavLink to="/importar" className="botao primario">
-            importar CSV
-          </NavLink>
+          <>
+            <SeletorMes mes={mes} aoMudar={setMes} />
+            <NavLink to="/importar" className="botao primario">
+              importar CSV
+            </NavLink>
+          </>
         }
       />
 

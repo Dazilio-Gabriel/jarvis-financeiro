@@ -65,6 +65,7 @@ export type ResultadoImport = {
   previa?: boolean
   arquivo: string
   tipo: string
+  mes_fatura?: string
   total_linhas: number
   importadas?: number
   duplicadas?: number
@@ -173,7 +174,7 @@ export const buscarImportacoes = (sinal?: AbortSignal) =>
 
 export const importarCSV = (
   arquivo: File,
-  opcoes: { conta?: string; pessoa?: string; tipo?: string; prever?: boolean },
+  opcoes: { conta?: string; pessoa?: string; tipo?: string; prever?: boolean; mesFatura?: string },
 ) => {
   const form = new FormData()
   form.append('arquivo', arquivo)
@@ -181,6 +182,7 @@ export const importarCSV = (
   if (opcoes.pessoa) form.append('pessoa', opcoes.pessoa)
   if (opcoes.tipo) form.append('tipo', opcoes.tipo)
   if (opcoes.prever) form.append('prever', '1')
+  if (opcoes.mesFatura) form.append('mes_fatura', opcoes.mesFatura)
 
   // sem Content-Type: o browser precisa gerar o boundary do multipart sozinho
   return pedir<ResultadoImport>('/api/importar', { method: 'POST', body: form })
@@ -201,3 +203,39 @@ export const perguntar = (pergunta: string, historico: Turno[]) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pergunta, historico }),
   })
+
+export type Estatisticas = {
+  mes: string
+  saidas_centavos: number
+  entradas_centavos: number
+  saidas_mes_anterior: number
+  transacoes: number
+  categorias: {
+    categoria_id: number | null
+    nome: string
+    cor: string
+    total_centavos: number
+    quantidade: number
+    ticket_medio_centavos: number
+    mes_anterior_centavos: number
+    orcamento_centavos: number | null
+  }[]
+  estabelecimentos: { nome: string; categoria: string; cor: string; total_centavos: number; quantidade: number }[]
+  parcelas: {
+    estabelecimento: string
+    descricao: string
+    categoria: string
+    cor: string
+    atual: number
+    total: number
+    valor_centavos: number
+    restante_centavos: number
+    termina: string
+  }[]
+  parcelas_mes_centavos: number
+  parcelas_futuro_centavos: number
+  evolucao: { mes: string; total_centavos: number; categorias: { nome: string; cor: string; total_centavos: number }[] }[]
+}
+
+export const buscarEstatisticas = (mes: string, sinal?: AbortSignal) =>
+  pedir<Estatisticas>(`/api/estatisticas?mes=${mes}`, { signal: sinal })

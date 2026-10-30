@@ -11,7 +11,8 @@ param(
     [string]$Pasta = "$env:USERPROFILE\jarvis-mysql",
     [int]$Porta = 3307,
     [string]$Versao = "8.4.11",
-    [string]$Senha = "jarvis_dev_2026"
+    [string]$Senha = "jarvis_dev_2026",
+    [switch]$ForcarDemo # grava a base sintetica mesmo com dado real no banco
 )
 
 $ErrorActionPreference = "Stop"
@@ -101,11 +102,23 @@ $Sql = "CREATE DATABASE IF NOT EXISTS jarvis CHARACTER SET utf8mb4 COLLATE utf8m
 & "$Bin\mysql.exe" -u root --host=127.0.0.1 --port=$Porta -e $Sql
 if ($LASTEXITCODE -ne 0) { throw "falha ao criar banco/usuario (o root desta instancia tem senha?)" }
 
-# migration so usa CREATE TABLE IF NOT EXISTS e INSERT IGNORE: rodar de novo nao estraga nada.
-# "source" e nao pipe: o PS 5.1 converte o pipe para ASCII e "Alimentação" vira "Alimenta??o"
-$Migr = (Join-Path $Raiz "backend\migrations\001_inicial.sql") -replace '\\', '/'
-& "$Bin\mysql.exe" -u root --host=127.0.0.1 --port=$Porta --default-character-set=utf8mb4 jarvis -e "source $Migr"
-if ($LASTEXITCODE -ne 0) { throw "falha ao aplicar a migration" }
+# Aplica cada migration uma vez so, registrando na tabela migracoes.
+# A 001 e idempotente (IF NOT EXISTS / INSERT IGNORE), entao banco antigo sem registro nao quebra.
+# "source" e nao pipe: o PS 5.1 converte o pipe para ASCII e o acento vira "?"
+function MySql($sql) {
+    $r = & "$Bin\mysql.exe" -u root --host=127.0.0.1 --port=$Porta --default-character-set=utf8mb4 -N jarvis -e $sql
+    if ($LASTEXITCODE -ne 0) { throw "falha no SQL: $sql" }
+    return $r
+}
+MySql "CREATE TABLE IF NOT EXISTS migracoes (nome VARCHAR(100) PRIMARY KEY, aplicada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP)" | Out-Null
+$Feitas = @(MySql "SELECT nome FROM migracoes")
+Get-ChildItem (Join-Path $Raiz "backend\migrations\*.sql") | Sort-Object Name | ForEach-Object {
+    if ($Feitas -contains $_.Name) { return }
+    Write-Host "aplicando $($_.Name)"
+    $Migr = $_.FullName -replace '\\', '/'
+    MySql "source $Migr" | Out-Null
+    MySql "INSERT INTO migracoes (nome) VALUES ('$($_.Name)')" | Out-Null
+}
 
 # ---------------------------------------------------------------- 5. .env
 $Env = Join-Path $Raiz "backend\.env"
@@ -128,13 +141,20 @@ if (-not $TemChave) {
 }
 
 # ---------------------------------------------------------------- 6. base sintetica
-Passo "Gravando a base sintetica (julho a outubro de 2026)"
-Push-Location (Join-Path $Raiz "backend")
-try {
-    go run ./cmd/semear -orcamentos
-    if ($LASTEXITCODE -ne 0) { throw "semear falhou" }
-} finally {
-    Pop-Location
+# so em banco sem dado real: dado ficticio misturado com fatura de verdade estraga os totais
+$Reais = [int](MySql "SELECT COUNT(*) FROM transacoes WHERE fonte <> 'sintetico'")
+if ($Reais -gt 0 -and -not $ForcarDemo) {
+    Write-Host "`nO banco ja tem $Reais lancamentos reais: base sintetica NAO gravada." -ForegroundColor Yellow
+    Write-Host "Para o video/eval use um banco separado (ver SETUP-DEV.md, 'Banco de demonstracao')."
+} else {
+    Passo "Gravando a base sintetica (julho a outubro de 2026)"
+    Push-Location (Join-Path $Raiz "backend")
+    try {
+        go run ./cmd/semear -orcamentos
+        if ($LASTEXITCODE -ne 0) { throw "semear falhou" }
+    } finally {
+        Pop-Location
+    }
 }
 
 Write-Host "`nPronto. Para usar:" -ForegroundColor Green

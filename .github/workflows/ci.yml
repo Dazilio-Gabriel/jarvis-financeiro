@@ -47,8 +47,8 @@ jobs:
       - name: go vet
         run: go vet ./...
 
-      - name: Aplicar migration
-        run: mysql -h 127.0.0.1 -u jarvis -pjarvis jarvis < migrations/001_inicial.sql
+      - name: Aplicar migrations
+        run: for f in migrations/*.sql; do echo "$f"; mysql -h 127.0.0.1 -u root -praiz jarvis < "$f"; done
 
       - name: go test (unitarios + integracao)
         env:

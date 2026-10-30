@@ -17,6 +17,33 @@ Depois, só falta colar a `GROQ_API_KEY` no `backend\.env` (chave grátis em
 <https://console.groq.com/keys>). No dia a dia: `scripts\mysql-dev.bat` (se o banco não estiver
 no ar, por exemplo depois de reiniciar) e `dev.bat`.
 
+Tudo de uma vez (instala Git/Go/Node se faltar, prepara o banco, pede a chave e sobe o sistema):
+`powershell -ExecutionPolicy Bypass -File scriptsodar-tudo.ps1`.
+
+### Mês da fatura
+
+Na fatura do cartão, a compra de 20/10 é paga na fatura de novembro: ela conta em **novembro**
+(coluna `mes_ref`). Na importação, o mês da fatura vem do nome do arquivo do Nubank
+(`Nubank_2026-11-15.csv` → novembro) e pode ser trocado na tela. Extrato de conta e lançamento
+manual usam o mês da data. Totais por mês (dashboard, estatísticas, chat) usam `mes_ref`.
+
+### Banco de demonstração
+
+O setup só grava a base sintética se o banco **não** tiver dado real, para não misturar ficção
+com as suas faturas. Para vídeo e eval, use um banco separado:
+
+```
+mysql -u root --port=3307 -e "CREATE DATABASE jarvis_demo CHARACTER SET utf8mb4; GRANT SELECT, INSERT, UPDATE, DELETE ON jarvis_demo.* TO 'jarvis'@'localhost'"
+mysql -u root --port=3307 jarvis_demo -e "source backend/migrations/001_inicial.sql; source backend/migrations/002_mes_ref.sql"
+```
+
+E rode com o DSN dele (variável de ambiente vence o `.env`):
+
+```
+$env:MYSQL_DSN='jarvis:jarvis_dev_2026@tcp(127.0.0.1:3307)/jarvis_demo?parseTime=true&charset=utf8mb4&loc=Local'
+go run ./cmd/semear -orcamentos; go run ./cmd/eval     # ou go run ./cmd/servidor
+```
+
 O resto deste arquivo é o histórico da instalação manual.
 
 ## Ordem para subir tudo

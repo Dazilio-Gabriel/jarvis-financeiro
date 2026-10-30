@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/util"
@@ -38,6 +40,7 @@ type CSV struct {
 	conta     string
 	pessoa    string
 	tipoArq   TipoArquivo
+	mesRef    time.Time // mes da fatura; zero = cada compra fica no mes da propria data
 	Erros     []string
 	Linhas    int
 	Detectado TipoArquivo
@@ -48,6 +51,29 @@ func NovoCSV(pcNome string, paDado []byte, pcCont, pcPess string, poTipo TipoArq
 		poTipo = Auto
 	}
 	return &CSV{nome: pcNome, dados: paDado, conta: pcCont, pessoa: pcPess, tipoArq: poTipo}
+}
+
+// ComMesFatura define o mes da fatura do cartao. So vale para fatura: no extrato de conta
+// o dinheiro sai no dia da transacao.
+func (c *CSV) ComMesFatura(pdMes time.Time) *CSV {
+	c.mesRef = pdMes
+	return c
+}
+
+// Nubank_2026-11-15.csv -> fatura com vencimento em 15/11/2026
+var oReArq = regexp.MustCompile(`(\d{4})-(\d{2})-\d{2}`)
+
+// MesDoArquivo tira o mes da fatura do nome do arquivo que o Nubank gera
+func MesDoArquivo(pcNome string) (time.Time, bool) {
+	laAcha := oReArq.FindStringSubmatch(pcNome)
+	if laAcha == nil {
+		return time.Time{}, false
+	}
+	ldMes, err := time.ParseInLocation("2006-01", laAcha[1]+"-"+laAcha[2], time.Local)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return ldMes, true
 }
 
 func (c *CSV) Nome() string {
@@ -72,9 +98,10 @@ func (c *CSV) Importar(ctx context.Context) ([]financas.Transacao, error) {
 
 	laCorp := laLinh[1:]
 	c.Linhas = len(laCorp)
-	c.Detectado = c.detectarTipo(laCorp, loMapa)
+	c.Detectado = c.detectarTipo(laLinh[0], laCorp, loMapa)
 
 	laTran := make([]financas.Transacao, 0, len(laCorp))
+	loOcor := map[string]int{} // compra identica repetida no arquivo e compra real, nao duplicata
 
 	lnColu := len(laLinh[0])
 
@@ -102,6 +129,11 @@ func (c *CSV) Importar(ctx context.Context) ([]financas.Transacao, error) {
 		if err != nil {
 			c.Erros = append(c.Erros, fmt.Sprintf("linha %d: %v", lnIdx+2, err))
 			continue
+		}
+		lcChav := loTran.HashExterno
+		loOcor[lcChav]++
+		if loOcor[lcChav] > 1 {
+			loTran.GerarHashN(loOcor[lcChav])
 		}
 		laTran = append(laTran, loTran)
 	}
@@ -189,10 +221,15 @@ func contem(paLista []string, pcAlvo string) bool {
 }
 
 // detectarTipo: extrato de conta tem identificador e valores negativos.
-// Fatura de cartao vem so com valores positivos, que sao todos despesa.
-func (c *CSV) detectarTipo(paCorp [][]string, poMapa mapaColunas) TipoArquivo {
+// Fatura do Nubank vem com cabecalho em ingles (date,title,amount) e pode ter negativo
+// (pagamento, estorno): sem olhar o cabecalho, a fatura inteira virava "entrada".
+func (c *CSV) detectarTipo(paCabe []string, paCorp [][]string, poMapa mapaColunas) TipoArquivo {
 	if c.tipoArq != Auto {
 		return c.tipoArq
+	}
+
+	if poMapa.identificador < 0 && poMapa.desc < len(paCabe) && util.NormText(paCabe[poMapa.desc]) == "TITLE" {
+		return Cartao
 	}
 
 	if poMapa.identificador >= 0 {
@@ -236,7 +273,8 @@ func (c *CSV) montarTransacao(paCamp []string, poMapa mapaColunas) (financas.Tra
 	}
 
 	// Na fatura todo valor positivo e despesa; no extrato o sinal ja diz.
-	if c.Detectado == Cartao && lnValo > 0 {
+	// fatura: positivo e compra (sai dinheiro), negativo e estorno/pagamento (volta credito)
+	if c.Detectado == Cartao {
 		lnValo = -lnValo
 	}
 
@@ -253,6 +291,9 @@ func (c *CSV) montarTransacao(paCamp []string, poMapa mapaColunas) (financas.Tra
 		Conta:     c.conta,
 		Pessoa:    c.pessoa,
 		Fonte:     "csv",
+	}
+	if c.Detectado == Cartao && !c.mesRef.IsZero() {
+		loTran.MesRef = c.mesRef
 	}
 	loTran.GerarHash()
 

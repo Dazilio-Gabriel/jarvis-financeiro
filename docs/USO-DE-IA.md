@@ -126,3 +126,30 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   respostas reais da Groq), cartões em HTML, narração sintética (voz Microsoft Maria) e ffmpeg.
 - **Revisão humana:** _(preencher: respostas do chat conferidas com o dashboard, vídeo revisado
   pelo grupo)._
+
+### 2026-10-29/30 — Correções com dados reais e tela de estatísticas
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5)
+- **Tarefa:** depois de importar as próprias faturas, o autor relatou problemas e pediu melhorias.
+- **Prompt (literal):**
+  > cara, finalize o video primeiro, depois solucione esse bug, se esta la nao é dupliocado,
+  > realmente tive isso, ja faça a separacao por mes, vc consegue ver isso nitidamente no nome do
+  > arquivo ou me perguntar na parte de importacao, faça uma nova tela com graficos melhores
+  > referentes a cada categoria que gastei tipo "bh gastei x" entendeu? queria ver essas
+  > estatisticas ai e tem compras que parcelei, nao sei se ali fala, mas veja isso ai pra mim tbm pf
+- **Resultado:**
+  - deduplicação: duas compras idênticas no mesmo dia (mesmo valor e descrição) eram tratadas
+    como duplicata e uma era descartada; agora a 2ª ocorrência no arquivo recebe hash próprio;
+  - bug encontrado nos dados reais: a fatura do Nubank com uma linha negativa (estorno/pagamento)
+    era detectada como extrato e **todas as compras viravam "entrada"**; detecção passou a usar o
+    cabeçalho (`date,title,amount`) e, na fatura, negativo vira crédito;
+  - mês de referência (`mes_ref`, migration 002): compras da fatura contam no mês da fatura,
+    deduzido do nome do arquivo ou escolhido na importação; seletor de mês no Dashboard;
+  - tela `/estatisticas` e `GET /api/estatisticas`: rosca por categoria, ranking de
+    estabelecimentos, comparação com o mês anterior, ticket médio, parcelas (lidas de
+    "Parcela N/M") com valor restante e término, evolução empilhada de 6 meses;
+  - ferramenta nova do chat `gasto_por_estabelecimento` ("quanto gastei no BH?");
+  - setup aplica migrations com controle (`migracoes`) e não mistura base sintética com dado real;
+    `scripts/rodar-tudo.ps1` faz tudo num comando.
+- **Revisão humana:** _(preencher: conferir os totais das faturas de novembro e dezembro contra o
+  app do Nubank)._

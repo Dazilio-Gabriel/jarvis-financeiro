@@ -3,6 +3,7 @@ package importador
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 )
@@ -58,6 +59,52 @@ func TestImportarFaturaViraDebito(t *testing.T) {
 		if loTran.Tipo != financas.Debito || loTran.Valor >= 0 {
 			t.Errorf("fatura gerou %+v; todo item de fatura e despesa", loTran)
 		}
+	}
+}
+
+func TestImportarFaturaNubankComEstornoEMesDaFatura(t *testing.T) {
+	// fatura real tem linha negativa (estorno/pagamento) e compras identicas no mesmo dia
+	lcDado := "date,title,amount\n" +
+		"2026-10-20,Padaria,3.48\n" +
+		"2026-10-20,Padaria,3.48\n" +
+		"2026-10-21,Loja X - Parcela 2/10,100.00\n" +
+		"2026-10-22,Estorno de compra,-50.00\n"
+
+	ldNov := time.Date(2026, 11, 1, 0, 0, 0, 0, time.Local)
+	loCSV := NovoCSV("Nubank_2026-11-15.csv", []byte(lcDado), "", "", Auto).ComMesFatura(ldNov)
+	laTran, err := loCSV.Importar(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loCSV.Detectado != Cartao {
+		t.Fatalf("detectou %q; fatura com estorno tem que continuar sendo cartao", loCSV.Detectado)
+	}
+	if len(laTran) != 4 {
+		t.Fatalf("%d transacoes, esperado 4", len(laTran))
+	}
+	if laTran[0].Tipo != financas.Debito || laTran[0].Valor != -348 {
+		t.Errorf("compra = %+v, esperado debito de R$ 3,48", laTran[0])
+	}
+	if laTran[3].Tipo != financas.Credito || laTran[3].Valor != 5000 {
+		t.Errorf("estorno = %+v, esperado credito de R$ 50,00", laTran[3])
+	}
+	if laTran[0].HashExterno == laTran[1].HashExterno {
+		t.Error("as duas compras de R$ 3,48 tem o mesmo hash: a segunda seria descartada")
+	}
+	for _, loTran := range laTran {
+		if !loTran.Referencia().Equal(ldNov) {
+			t.Errorf("%q no mes %v, esperado o da fatura (11/2026)", loTran.Descricao, loTran.Referencia())
+		}
+	}
+}
+
+func TestMesDoArquivo(t *testing.T) {
+	ldMes, llOk := MesDoArquivo("Nubank_2026-12-15.csv")
+	if !llOk || ldMes.Year() != 2026 || ldMes.Month() != time.December {
+		t.Errorf("MesDoArquivo = %v, %v", ldMes, llOk)
+	}
+	if _, llOk := MesDoArquivo("extrato.csv"); llOk {
+		t.Error("achou mes em nome sem data")
 	}
 }
 

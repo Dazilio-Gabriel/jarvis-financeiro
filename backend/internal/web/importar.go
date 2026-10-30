@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/importador"
@@ -43,6 +44,24 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 		importador.TipoArquivo(r.FormValue("tipo")),
 	)
 
+	// mes da fatura: o que o usuario escolheu na tela; senao, o do nome do arquivo do Nubank
+	ldMesF, llTemM := importador.MesDoArquivo(loCabe.Filename)
+	if lcMesF := r.FormValue("mes_fatura"); lcMesF != "" {
+		ldEsco, err := time.ParseInLocation("2006-01", lcMesF, time.Local)
+		if err != nil {
+			erroJSON(w, http.StatusBadRequest, "mes_fatura fora do formato AAAA-MM")
+			return
+		}
+		ldMesF, llTemM = ldEsco, true
+	}
+	if llTemM {
+		loFont.ComMesFatura(ldMesF)
+	}
+	lcMesF := ""
+	if llTemM {
+		lcMesF = ldMesF.Format("2006-01")
+	}
+
 	laTran, err := loFont.Importar(r.Context())
 	if err != nil {
 		erroJSON(w, http.StatusUnprocessableEntity, err.Error())
@@ -65,6 +84,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 			"previa":        true,
 			"arquivo":       loCabe.Filename,
 			"tipo":          string(loFont.Detectado),
+			"mes_fatura":    lcMesF,
 			"total_linhas":  loFont.Linhas,
 			"validas":       len(laTran),
 			"com_erro":      len(loFont.Erros),
@@ -100,6 +120,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 		"id":            loImpo.ID,
 		"arquivo":       loImpo.Arquivo,
 		"tipo":          string(loFont.Detectado),
+		"mes_fatura":    lcMesF,
 		"total_linhas":  loFont.Linhas,
 		"importadas":    lnInse,
 		"duplicadas":    lnDupl,

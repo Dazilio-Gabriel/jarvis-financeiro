@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { buscarImportacoes, importarCSV, type ResultadoImport } from '../api'
 import { Cabecalho, Cartao, Carregando, Pill, Vazio } from '../componentes/Base'
-import { fmtBRL, fmtDataCurta, useBusca } from '../util'
+import { fmtBRL, fmtDataCurta, mesDoArquivo, rotuloMes, useBusca } from '../util'
 
 type Fase = 'escolher' | 'enviando' | 'previa' | 'pronto'
 
@@ -11,6 +11,7 @@ export default function Importar() {
   const [conta, setConta] = useState('')
   const [pessoa, setPessoa] = useState('')
   const [tipo, setTipo] = useState('auto')
+  const [mesFatura, setMesFatura] = useState('')
   const [resultado, setResultado] = useState<ResultadoImport | null>(null)
   const [erro, setErro] = useState('')
   const [arrastando, setArrastando] = useState(false)
@@ -25,6 +26,7 @@ export default function Importar() {
     setErro('')
     setFase('escolher')
     if (!conta) setConta(palpiteConta(f.name))
+    setMesFatura(mesDoArquivo(f.name))
   }
 
   async function enviar(prever: boolean) {
@@ -33,7 +35,7 @@ export default function Importar() {
     setErro('')
 
     try {
-      const res = await importarCSV(arquivo, { conta, pessoa, tipo, prever })
+      const res = await importarCSV(arquivo, { conta, pessoa, tipo, prever, mesFatura })
       setResultado(res)
       setFase(prever ? 'previa' : 'pronto')
       if (!prever) recarregarHistorico()
@@ -128,6 +130,17 @@ export default function Importar() {
                 <option value="conta">extrato de conta</option>
                 <option value="cartao">fatura de cartão</option>
               </select>
+            </label>
+
+            {/* fatura: as compras contam no mes em que a fatura e paga, nao no dia da compra */}
+            <label className="campo">
+              <span>MÊS DA FATURA</span>
+              <input
+                type="month"
+                value={mesFatura}
+                onChange={(e) => setMesFatura(e.target.value)}
+                title="Só vale para fatura de cartão. Vem do nome do arquivo do Nubank; confira."
+              />
             </label>
           </div>
 
@@ -246,6 +259,7 @@ function Resultado({
       rodape={
         <>
           <Pill>TIPO: {res.tipo.toUpperCase()}</Pill>
+          {res.tipo === 'cartao' && res.mes_fatura && <Pill tom="ok">FATURA: {rotuloMes(`${res.mes_fatura}-01`).toUpperCase()}</Pill>}
           <Pill>{res.total_linhas} LINHAS</Pill>
           {res.categorizadas > 0 && (
             <Pill tom="ok">{res.categorizadas} CATEGORIZADAS</Pill>

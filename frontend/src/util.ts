@@ -105,3 +105,29 @@ export function useBusca<T>(
 
   return [estado, () => setGatilho((g) => g + 1)]
 }
+
+/** Mes no formato AAAA-MM. */
+export function mesAtual() {
+  const hoje = new Date()
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Soma (ou subtrai) meses a um AAAA-MM. */
+export function somarMes(mes: string, n: number) {
+  const [a, m] = mes.split('-').map(Number)
+  const d = new Date(a, m - 1 + n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Primeiro e ultimo dia de um AAAA-MM, em ISO: o backend trata como mes de referencia. */
+export function limitesMes(mes: string) {
+  const [a, m] = mes.split('-').map(Number)
+  const fim = new Date(a, m, 0).getDate()
+  return { de: `${mes}-01`, ate: `${mes}-${String(fim).padStart(2, '0')}` }
+}
+
+/** "Nubank_2026-11-15.csv" -> "2026-11": o Nubank poe o vencimento da fatura no nome. */
+export function mesDoArquivo(nome: string) {
+  const m = /(\d{4})-(\d{2})-\d{2}/.exec(nome)
+  return m ? `${m[1]}-${m[2]}` : ''
+}

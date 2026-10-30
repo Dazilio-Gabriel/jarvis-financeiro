@@ -45,6 +45,7 @@ func (s *Servidor) Rotas() http.Handler {
 
 	loMux.HandleFunc("GET /api/resumo", s.resumo)
 	loMux.HandleFunc("GET /api/evolucao", s.evolucao)
+	loMux.HandleFunc("GET /api/estatisticas", s.estatisticas)
 
 	loMux.HandleFunc("POST /api/chat", s.chat)
 

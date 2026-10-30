@@ -72,6 +72,12 @@ func Ferramentas() []Ferramenta {
 		ferramenta("listar_categorias",
 			"Lista as categorias cadastradas e o orçamento mensal de cada uma.",
 			map[string]any{}),
+		ferramenta("gasto_por_estabelecimento",
+			"Quanto foi gasto em cada estabelecimento (loja, mercado, app) no mês, do maior para o menor. Use para perguntas como 'quanto gastei no BH' ou 'onde mais gastei'.",
+			map[string]any{
+				"mes":   texto("mês no formato AAAA-MM"),
+				"busca": texto("trecho do nome do estabelecimento, ex.: BH (opcional)"),
+			}, "mes"),
 		ferramenta("comparar_meses",
 			"Compara o gasto total e por categoria de dois meses.",
 			map[string]any{
@@ -99,6 +105,8 @@ func executar(ctx context.Context, poFont Fonte, pcNome, pcArgs string) string {
 		loResu, err = buscarTransacoes(ctx, poFont, loArgs)
 	case "listar_categorias":
 		loResu, err = listarCategorias(ctx, poFont)
+	case "gasto_por_estabelecimento":
+		loResu, err = gastoPorEstabelecimento(ctx, poFont, loArgs["mes"], loArgs["busca"])
 	case "comparar_meses":
 		loResu, err = compararMeses(ctx, poFont, loArgs["mes_a"], loArgs["mes_b"])
 	default:
@@ -252,6 +260,34 @@ func buscarTransacoes(ctx context.Context, poFont Fonte, poArgs map[string]strin
 		})
 	}
 	return map[string]any{"quantidade": len(laLinh), "transacoes": laLinh}, nil
+}
+
+func gastoPorEstabelecimento(ctx context.Context, poFont Fonte, pcMes, pcBusc string) (any, error) {
+	ldDe, ldAte, err := lerMes(pcMes)
+	if err != nil {
+		return nil, err
+	}
+	laTran, err := poFont.Listar(ctx, financas.Filtro{De: ldDe, Ate: ldAte, SemLimite: true})
+	if err != nil {
+		return nil, err
+	}
+
+	lcBusc := util.NormText(pcBusc)
+	laLinh := []map[string]any{}
+	for _, loEsta := range financas.PorEstabelecimento(laTran) {
+		if lcBusc != "" && !strings.Contains(util.NormText(loEsta.Nome), lcBusc) {
+			continue
+		}
+		laLinh = append(laLinh, map[string]any{
+			"estabelecimento": loEsta.Nome,
+			"total":           loEsta.Total.String(),
+			"compras":         loEsta.Quantidade,
+		})
+		if len(laLinh) == 15 {
+			break // o resto e cauda longa; lista grande so gasta token
+		}
+	}
+	return map[string]any{"mes": util.FormMesA(ldDe), "estabelecimentos": laLinh}, nil
 }
 
 func listarCategorias(ctx context.Context, poFont Fonte) (any, error) {

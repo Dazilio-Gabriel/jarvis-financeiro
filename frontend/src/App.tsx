@@ -6,12 +6,14 @@ import Transacoes from './paginas/Transacoes'
 import Importar from './paginas/Importar'
 import Categorias from './paginas/Categorias'
 import Chat from './paginas/Chat'
+import Estatisticas from './paginas/Estatisticas'
 import './App.css'
 
 type Conexao = 'carregando' | 'ok' | 'erro'
 
 const MENU = [
   { rota: '/dashboard', icone: '◈', nome: 'Dashboard', desc: 'visão do mês' },
+  { rota: '/estatisticas', icone: '◔', nome: 'Estatísticas', desc: 'onde e quanto gastei' },
   { rota: '/transacoes', icone: '≡', nome: 'Transações', desc: 'todos os lançamentos' },
   { rota: '/importar', icone: '↧', nome: 'Importar', desc: 'CSV do banco' },
   { rota: '/categorias', icone: '◐', nome: 'Categorias', desc: 'orçamento e regras' },
@@ -113,6 +115,7 @@ export default function App() {
             <Route path="/importar" element={<Importar />} />
             <Route path="/categorias" element={<Categorias />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/estatisticas" element={<Estatisticas />} />
             <Route path="*" element={<NaoEncontrado />} />
           </Routes>
         </div>
