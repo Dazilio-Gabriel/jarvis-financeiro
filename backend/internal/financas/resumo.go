@@ -4,16 +4,17 @@ import "time"
 
 // Filtro monta o WHERE da consulta de transacoes. Campo zerado nao filtra.
 type Filtro struct {
-	De          time.Time
-	Ate         time.Time
-	CategoriaID *int64
-	Pessoa      string
-	Conta       string
-	Tipo        Tipo
-	Busca       string
-	Limite      int
-	Offset      int
-	SemLimite   bool // so para uso interno: traz o periodo inteiro
+	De           time.Time
+	Ate          time.Time
+	CategoriaID  *int64
+	Pessoa       string
+	Conta        string
+	Tipo         Tipo
+	Busca        string
+	Limite       int
+	Offset       int
+	SemLimite    bool // so para uso interno: traz o periodo inteiro
+	SemCategoria bool // so as que ainda nao tem categoria
 }
 
 // ResumoCategoria e o total gasto numa categoria dentro do periodo

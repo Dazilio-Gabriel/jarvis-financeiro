@@ -66,7 +66,7 @@ func main() {
 		// um assistente por pergunta, preso a familia de quem perguntou
 		loWeb.ComAssistente(func(poFont assistente.Fonte) web.Perguntador {
 			return assistente.Novo(loMode, poFont)
-		})
+		}).ComCategorizador(loMode)
 		log.Println("assistente ligado")
 	} else {
 		log.Println("GROQ_API_KEY/LLM_CHAVE vazio: chat desligado, o resto funciona normal")

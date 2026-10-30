@@ -214,3 +214,25 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   registro de uso da IA por usuário; testes com Google falso e de acesso ao painel; teste ponta a
   ponta no navegador (que pegou e corrigiu um defeito da proteção de CSRF atrás de proxy).
 - **Revisão humana:** _(preencher)_
+
+### 2026-10-30 — Deploy no Render/TiDB e categorização por IA
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5)
+- **Prompts (literais, resumo da sequência):**
+  > bora hospedar, me ajude ai como faço la? static site memso?
+
+  > criei aq agora, no caso o mes 11 esta preenchido la mas nao separou as categos, so o valor geral mesmo
+
+  > no caso, queria que ele salvasse certinho a questao do banco e tal, tipo, separar por gastos e
+  > tudo mais po / tipo BH ele saber q é o mercado kabum ele saber q é jogo e assim vai / e oq ele
+  > nao conseguir identificar, ele perguntar pra mim, entendeu?
+- **Resultado:** deploy no Render (Blueprint) com banco no TiDB Cloud. Os testes de integração
+  rodados **contra o TiDB** acharam duas incompatibilidades (ALTER com coluna + índice; collation
+  `utf8mb4_bin` deixando a busca sensível a maiúscula) — corrigidas antes da primeira subida.
+  Dados reais copiados do banco local para a família 1. Categorização por IA (item F7, antecipado
+  da C3): `assistente.SugerirCategorias` em modo JSON, com validação da saída (categoria fora da
+  lista e estabelecimento não enviado são descartados; "?" vira pergunta ao usuário); grava a
+  categoria e cria regras; tela de pendências com "nova categoria"; apagar regra. Testado com as
+  faturas reais: 66 de 83 compras categorizadas na primeira passada, 17 perguntas (pessoas,
+  intermediadores de pagamento, IOF).
+- **Revisão humana:** _(preencher: conferir as categorias sugeridas)_

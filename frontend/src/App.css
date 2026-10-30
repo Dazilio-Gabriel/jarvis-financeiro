@@ -1539,6 +1539,97 @@ code {
   opacity: 1;
 }
 
+.categorizar-ia {
+  margin-bottom: 0.75rem;
+}
+
+.cat-ia-topo {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.cat-ia-topo .dica {
+  flex: 1;
+  min-width: 240px;
+  margin: 0;
+}
+
+.cat-ia-resultado {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  font-size: 0.88rem;
+}
+
+.cat-ia-rotulo {
+  display: block;
+  margin: 1.1rem 0 0.5rem;
+}
+
+.cat-ia-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cat-ia-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--borda);
+  flex-wrap: wrap;
+}
+
+.cat-ia-lista li div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cat-ia-lista strong {
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.cat-ia-lista em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--txt-fraco);
+}
+
+.cat-ia-lista select {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  color: var(--txt);
+  font-family: inherit;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.regra-apagar {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: var(--txt-fraco);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+}
+
+.regra-apagar:hover {
+  color: var(--vermelho);
+}
+
 .usuario {
   display: flex;
   align-items: center;

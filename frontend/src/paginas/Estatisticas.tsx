@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import { buscarEstatisticas, type Estatisticas as Dados } from '../api'
 import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, Vazio } from '../componentes/Base'
 import { fmtBRL, mesAtual, NOMES_MES, rotuloMes, useBusca } from '../util'
@@ -130,7 +131,17 @@ export default function Estatisticas() {
       )}
 
       <div className="grade">
-        <Cartao titulo="POR CATEGORIA" indice={1}>
+        <Cartao
+          titulo="POR CATEGORIA"
+          indice={1}
+          extra={
+            d.categorias.some((c) => c.categoria_id === null) && (
+              <NavLink to="/categorias" className="botao pequeno">
+                ✦ categorizar com IA
+              </NavLink>
+            )
+          }
+        >
           <div className="rosca-bloco">
             <Rosca
               fatias={d.categorias.map((c) => ({ nome: c.nome, cor: c.cor, valor: c.total_centavos }))}

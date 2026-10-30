@@ -31,6 +31,10 @@ type CompraParcelada struct {
 var (
 	oReParcSufi = regexp.MustCompile(`(?i)\s*-?\s*\bparc(?:ela)?\.?\s*\d{1,2}\s*/\s*\d{1,2}\b.*$`)
 	oReEspa     = regexp.MustCompile(`\s+`)
+	// Nubank: "Pix no Crédito - LOJA - 2/3" -> parcela no fim, sem a palavra "Parcela"
+	oReParcCurt = regexp.MustCompile(`\s+-\s+\d{1,2}/\d{1,2}\s*$`)
+	// meio de pagamento na frente do nome: o estabelecimento e o que vem depois
+	oReMeio = regexp.MustCompile(`(?i)^(pix|boleto|ted|doc|transfer[eê]ncia)( no cr[eé]dito| enviad[oa]| recebid[oa])?\s+-\s+`)
 )
 
 // prefixos de maquininha/intermediador: "PG *LOJA", "MP *LOJA", "EC *LOJA" -> o nome real vem depois
@@ -41,6 +45,8 @@ var aPrefInte = map[string]bool{"PG": true, "PAG": true, "MP": true, "EC": true,
 // "Loja X - Parcela 2/10" vira "LOJA X".
 func NomeEstabelecimento(pcDesc string) string {
 	lcNome := oReParcSufi.ReplaceAllString(pcDesc, "")
+	lcNome = oReParcCurt.ReplaceAllString(lcNome, "")
+	lcNome = oReMeio.ReplaceAllString(strings.TrimSpace(lcNome), "")
 	lcNome = strings.ToUpper(strings.TrimSpace(lcNome))
 
 	if lcAnte, lcDepo, llTem := strings.Cut(lcNome, "*"); llTem {

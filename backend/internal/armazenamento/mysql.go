@@ -162,6 +162,31 @@ func (f *Familia) CriarRegra(ctx context.Context, poRegr financas.RegraCategoria
 	return loRes.LastInsertId()
 }
 
+var ErrCategoriaExiste = errors.New("ja existe uma categoria com esse nome")
+
+// CriarCategoria cria categoria nova na familia (ex.: "Jogos")
+func (f *Familia) CriarCategoria(ctx context.Context, pcNome, pcCor string) (int64, error) {
+	loRes, err := f.db.ExecContext(ctx,
+		`INSERT INTO categorias (familia_id, nome, cor) VALUES (?, ?, ?)`, f.id, pcNome, pcCor)
+	var loErMy *mysql.MySQLError
+	if errors.As(err, &loErMy) && loErMy.Number == codigoDuplicadoSQL {
+		return 0, ErrCategoriaExiste
+	}
+	if err != nil {
+		return 0, fmt.Errorf("criar categoria: %w", err)
+	}
+	return loRes.LastInsertId()
+}
+
+// ApagarRegra remove uma regra da familia (a IA cria regras; quem usa tem que poder desfazer)
+func (f *Familia) ApagarRegra(ctx context.Context, pnRegr int64) error {
+	_, err := f.db.ExecContext(ctx, `DELETE FROM regras_categoria WHERE id = ? AND familia_id = ?`, pnRegr, f.id)
+	if err != nil {
+		return fmt.Errorf("apagar regra: %w", err)
+	}
+	return nil
+}
+
 // ============================================================ TRANSACOES
 
 // InserirLote grava as transacoes ignorando as que ja existem pelo hash.
@@ -373,6 +398,9 @@ func (f *Familia) montarWhere(poFilt financas.Filtro) (string, []any) {
 	if poFilt.CategoriaID != nil {
 		laCond = append(laCond, "categoria_id = ?")
 		laArgs = append(laArgs, *poFilt.CategoriaID)
+	}
+	if poFilt.SemCategoria {
+		laCond = append(laCond, "categoria_id IS NULL")
 	}
 	if poFilt.Pessoa != "" {
 		laCond = append(laCond, "pessoa = ?")

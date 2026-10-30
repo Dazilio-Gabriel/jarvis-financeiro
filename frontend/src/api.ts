@@ -317,3 +317,26 @@ export type PainelAdmin = {
 }
 
 export const buscarPainelAdmin = (sinal?: AbortSignal) => pedir<PainelAdmin>('/api/admin/painel', { signal: sinal })
+
+export type Pendencia = { estabelecimento: string; compras: number; total_centavos: number; exemplo: string }
+
+export type ResultadoCategorizacao = {
+  categorizadas: number
+  regras_criadas: number
+  por_categoria: Record<string, number>
+  pendencias: Pendencia[]
+}
+
+export const categorizarComIA = () => postarJSON<ResultadoCategorizacao>('/api/categorizar/ia', {})
+
+export const buscarPendencias = (sinal?: AbortSignal) =>
+  pedir<{ pendencias: Pendencia[] }>('/api/categorizar/pendentes', { signal: sinal })
+
+export const responderPendencia = (estabelecimento: string, categoria_id: number) =>
+  postarJSON<{ categorizadas: number }>('/api/categorizar/estabelecimento', { estabelecimento, categoria_id })
+
+export const criarCategoria = (nome: string, cor: string) =>
+  postarJSON<{ id: number; nome: string; cor: string }>('/api/categorias', { nome, cor })
+
+export const apagarRegra = (id: number) =>
+  pedir<{ ok: boolean }>(`/api/regras/${id}`, { method: 'DELETE' })

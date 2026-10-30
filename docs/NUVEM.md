@@ -14,6 +14,7 @@ depender do PC de casa ligado. Tudo no plano gratuito.
 | 5 | **IA grátis**: Groq como padrão; qualquer provedor compatível por variável | ✅ pronto |
 | 6 | Levar os seus dados do PC para a nuvem (exportar/importar) | ⏳ depois do 3 (instruções abaixo) |
 | 7 | **Entrar com Google** (OAuth com PKCE) | ✅ pronto · ⏳ falta criar a credencial no Google Cloud (passo 4 abaixo) |
+| 7b | **Categorização por IA** (F7 da C3, antecipada): classifica, cria regras, pergunta o que não sabe | ✅ pronto |
 | 8 | **Painel de administração** (só o dono): usuários, famílias, uso da IA — sem dado financeiro | ✅ pronto |
 | 9 | Próximos: PWA (ícone no celular), backup automático, troca de senha, sair de todos os dispositivos | 📋 backlog |
 

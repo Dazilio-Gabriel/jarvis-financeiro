@@ -93,6 +93,22 @@ func (g *Groq) Completar(ctx context.Context, paMens []Mensagem, paFerr []Ferram
 		loCorp["tools"] = paFerr
 		loCorp["tool_choice"] = "auto"
 	}
+	return g.enviar(ctx, loCorp)
+}
+
+// CompletarJSON pede resposta em JSON valido (response_format), sem ferramentas: usado na
+// categorizacao, onde a saida e lida por codigo e nao por gente
+func (g *Groq) CompletarJSON(ctx context.Context, paMens []Mensagem) (string, Uso, error) {
+	loMens, loUso, err := g.enviar(ctx, map[string]any{
+		"model":           g.modelo,
+		"messages":        paMens,
+		"temperature":     0,
+		"response_format": map[string]string{"type": "json_object"},
+	})
+	return loMens.Content, loUso, err
+}
+
+func (g *Groq) enviar(ctx context.Context, loCorp map[string]any) (Mensagem, Uso, error) {
 	// gpt-oss raciocina antes de responder; com esforco alto o raciocinio as vezes vaza
 	// para o texto final ("That's 4 lines. Acceptable..."). Pouco esforco basta: o dado vem da ferramenta.
 	if strings.HasPrefix(g.modelo, "openai/gpt-oss") && strings.Contains(g.url, "groq.com") {

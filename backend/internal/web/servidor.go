@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -32,6 +33,7 @@ type Servidor struct {
 	limChat   *limitador                         // perguntas ao assistente por usuario (cota da IA e de todos)
 	producao  bool                               // HTTPS garantido pela hospedagem: cookie Secure e HSTS sempre
 	donoMail  string                             // unico e-mail que pode assumir a familia 1
+	catIA     assistente.ModeloJSON              // nil = "Categorizar com IA" desligado
 	google    *oauth2.Config                     // nil = "Entrar com Google" desligado
 	userinfo  string                             // endpoint do perfil Google (trocado no teste)
 }
@@ -87,10 +89,15 @@ func (s *Servidor) Rotas() http.Handler {
 	loPriv.HandleFunc("GET /api/admin/painel", s.exigirAdmin(s.painelAdmin))
 
 	loPriv.HandleFunc("GET /api/categorias", s.listarCategorias)
+	loPriv.HandleFunc("POST /api/categorias", s.criarCategoria)
+	loPriv.HandleFunc("POST /api/categorizar/ia", s.categorizarIA)
+	loPriv.HandleFunc("GET /api/categorizar/pendentes", s.listarPendencias)
+	loPriv.HandleFunc("POST /api/categorizar/estabelecimento", s.responderPendencia)
 	loPriv.HandleFunc("PUT /api/categorias/{id}/orcamento", s.salvarOrcamento)
 
 	loPriv.HandleFunc("GET /api/regras", s.listarRegras)
 	loPriv.HandleFunc("POST /api/regras", s.criarRegra)
+	loPriv.HandleFunc("DELETE /api/regras/{id}", s.apagarRegra)
 
 	loPriv.HandleFunc("GET /api/transacoes", s.listarTransacoes)
 	loPriv.HandleFunc("POST /api/transacoes", s.criarTransacao)
@@ -107,7 +114,7 @@ func (s *Servidor) Rotas() http.Handler {
 
 	loProt := s.exigirLogin(loPriv)
 	for _, lcRota := range []string{"/api/auth/eu", "/api/admin/", "/api/familia", "/api/familia/", "/api/categorias", "/api/categorias/",
-		"/api/regras", "/api/transacoes", "/api/transacoes/", "/api/resumo", "/api/evolucao",
+		"/api/regras", "/api/regras/", "/api/categorizar/", "/api/transacoes", "/api/transacoes/", "/api/resumo", "/api/evolucao",
 		"/api/estatisticas", "/api/chat", "/api/importar", "/api/importacoes"} {
 		loMux.Handle(lcRota, loProt)
 	}
@@ -253,6 +260,9 @@ func erroJSON(w http.ResponseWriter, pnStat int, pcMens string) {
 // erroInterno registra o detalhe no log e devolve mensagem generica: erro de banco traz nome de
 // coluna, host e usuario, que nao sao da conta de quem esta do outro lado
 func erroInterno(w http.ResponseWriter, err error) {
+	if errors.Is(err, context.Canceled) {
+		return // o navegador desistiu da requisicao (trocou de tela): nao e erro do servidor
+	}
 	log.Printf("erro interno: %v", err)
 	erroJSON(w, http.StatusInternalServerError, "erro interno, tente de novo")
 }

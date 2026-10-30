@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { buscarCategorias, buscarRegras, criarRegra, salvarOrcamento } from '../api'
+import { apagarRegra, buscarCategorias, buscarRegras, criarRegra, salvarOrcamento } from '../api'
+import CategorizarIA from '../componentes/CategorizarIA'
 import { Cabecalho, Cartao, Carregando, Erro, Pill, Vazio } from '../componentes/Base'
 import { fmtNum, useBusca } from '../util'
 
@@ -41,6 +42,16 @@ export default function Categorias() {
 
       {cats.fase === 'carregando' && <Carregando linhas={6} />}
       {cats.fase === 'erro' && <Erro mensagem={cats.mensagem} aoTentar={recarregarCats} />}
+
+      {cats.fase === 'ok' && (
+        <CategorizarIA
+          categorias={categorias}
+          aoMudar={() => {
+            recarregarCats()
+            recarregarRegras()
+          }}
+        />
+      )}
 
       {cats.fase === 'ok' && (
         <div className="grade">
@@ -138,6 +149,17 @@ export default function Categorias() {
                           {cat?.nome ?? `#${r.categoria_id}`}
                         </span>
                         <span className="regra-prio">p{r.prioridade}</span>
+                        <button
+                          className="regra-apagar"
+                          title="apagar regra"
+                          aria-label={`apagar regra ${r.padrao}`}
+                          onClick={async () => {
+                            await apagarRegra(r.id)
+                            recarregarRegras()
+                          }}
+                        >
+                          ×
+                        </button>
                       </div>
                     )
                   })}

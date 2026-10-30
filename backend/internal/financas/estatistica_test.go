@@ -16,7 +16,10 @@ func TestNomeEstabelecimento(t *testing.T) {
 		"Uber *Uber *Trip":                 "UBER",
 		"Posto Ipiranga 8842":              "POSTO IPIRANGA",
 		"  padaria   pao  quente ":         "PADARIA PAO QUENTE",
-		"Transferência recebida - Salário": "TRANSFERÊNCIA RECEBIDA - SALÁRIO",
+		"Transferência recebida - Salário": "SALÁRIO",
+		"Pix no Crédito - DLocal Brasil Instituicao de Pagamento S A - 3/3": "DLOCAL BRASIL INSTITUICAO DE PAGAMENTO S A",
+		"Pix no Crédito - DLocal Brasil Instituicao de Pagamento S A - 1/2": "DLOCAL BRASIL INSTITUICAO DE PAGAMENTO S A",
+		"Boleto no Crédito - HDI Seguros S A":                               "HDI SEGUROS S A",
 	}
 	for lcDesc, lcEspe := range casos {
 		if lcSaid := NomeEstabelecimento(lcDesc); lcSaid != lcEspe {
