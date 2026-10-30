@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { buscarEvolucao, buscarResumo, buscarTransacoes } from '../api'
 import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, Vazio } from '../componentes/Base'
-import { fmtBRL, fmtDataCurta, limitesMes, mesAtual, rotuloMes, useBusca } from '../util'
+import { fmtBRL, fmtDataCurta, limitesMes, linkCategoria, mesAtual, rotuloMes, useBusca } from '../util'
 
 export default function Dashboard() {
   // mes de referencia: na fatura do cartao, o da fatura (nao o do dia da compra)
@@ -115,10 +115,12 @@ export default function Dashboard() {
                   const estourou = pct !== null && pct > 100
 
                   return (
-                    <div
-                      className="linha"
+                    <NavLink
+                      to={linkCategoria(c.categoria_id, mes)}
+                      className="linha clicavel"
                       key={c.categoria_id ?? c.nome}
                       style={{ '--i': i } as React.CSSProperties}
+                      title={`ver as compras de ${c.nome}`}
                     >
                       <div className="linha-topo">
                         <span className="linha-nome">
@@ -146,7 +148,7 @@ export default function Dashboard() {
                           }
                         />
                       </div>
-                    </div>
+                    </NavLink>
                   )
                 })}
               </div>

@@ -236,3 +236,22 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   faturas reais: 66 de 83 compras categorizadas na primeira passada, 17 perguntas (pessoas,
   intermediadores de pagamento, IOF).
 - **Revisão humana:** _(preencher: conferir as categorias sugeridas)_
+
+### 2026-10-30 — Mudar categoria pelo chat, categorias clicáveis e cores
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5)
+- **Prompts (literais):**
+  > ficou bom, so que a AI confundiu certas categorias, tipo steam e nuvvem, sao jogos, entende?
+  > consegue colocar para o assistente conseguir fazer essas alteracoes?
+
+  > outras coisas, tipo no dashboard, tem a ali "assinaturas" poderia deixar eu clicar e me mostrar
+  > ali todos os gastos daquela categoria ali, sabe?
+
+  > arrume essa esquematizacao de cor, muitas cores iguais na aba compras parceladas as cores estao
+  > todas iguais
+- **Resultado:** ferramenta `mudar_categoria` no chat que só **propõe** (o modelo não grava; a
+  mudança é aplicada pela rota que o clique do usuário em "Confirmar" chama — defesa contra prompt
+  injection); categorias clicáveis no Dashboard e nas Estatísticas abrindo as transações filtradas;
+  paleta de 12 cores validada com o script do dataviz (daltonismo, distância entre vizinhas,
+  contraste no fundo escuro), migration 005, cor livre escolhida pelo servidor para categoria nova.
+- **Revisão humana:** _(preencher)_

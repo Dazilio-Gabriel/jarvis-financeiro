@@ -52,7 +52,7 @@ func (s *Servidor) estatisticas(w http.ResponseWriter, r *http.Request) {
 	}
 	nomeCor := func(poID *int64) (string, string) {
 		if poID == nil {
-			return "Sem categoria", "#6f8279"
+			return "Sem categoria", financas.CorSemCategoria
 		}
 		loItem := loCate[*poID]
 		return loItem.Nome, loItem.Cor

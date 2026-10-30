@@ -456,7 +456,7 @@ func (f *Familia) Resumo(ctx context.Context, pdDe, pdAte time.Time) (financas.R
 	loRows, err := f.db.QueryContext(ctx, `
 		SELECT t.categoria_id,
 		       COALESCE(c.nome, 'Sem categoria'),
-		       COALESCE(c.cor, '#6f8279'),
+		       COALESCE(c.cor, '#5b6660'),
 		       c.orcamento_centavos,
 		       SUM(ABS(t.valor_centavos)),
 		       COUNT(*)

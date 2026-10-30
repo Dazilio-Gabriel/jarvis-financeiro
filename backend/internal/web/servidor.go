@@ -93,6 +93,7 @@ func (s *Servidor) Rotas() http.Handler {
 	loPriv.HandleFunc("POST /api/categorizar/ia", s.categorizarIA)
 	loPriv.HandleFunc("GET /api/categorizar/pendentes", s.listarPendencias)
 	loPriv.HandleFunc("POST /api/categorizar/estabelecimento", s.responderPendencia)
+	loPriv.HandleFunc("POST /api/categorizar/mover", s.moverCategoria)
 	loPriv.HandleFunc("PUT /api/categorias/{id}/orcamento", s.salvarOrcamento)
 
 	loPriv.HandleFunc("GET /api/regras", s.listarRegras)

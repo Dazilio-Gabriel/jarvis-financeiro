@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { perguntar, type Turno } from '../api'
+import { moverCategoria, perguntar, type Proposta, type Turno } from '../api'
 import { Cabecalho } from '../componentes/Base'
 
-type Fala = Turno & { ferramentas?: string[]; ms?: number; tokens?: number; erro?: boolean }
+type Fala = Turno & {
+  ferramentas?: string[]
+  ms?: number
+  tokens?: number
+  erro?: boolean
+  acoes?: Proposta[]
+}
 
 const SUGESTOES = [
   'Quanto gastei este mês?',
@@ -42,6 +48,7 @@ export default function Chat() {
           papel: 'assistente',
           conteudo: r.resposta,
           ferramentas: r.ferramentas,
+          acoes: r.acoes,
           ms: r.ms,
           tokens: r.tokens,
         },
@@ -81,8 +88,9 @@ export default function Chat() {
 
           {falas.map((f, i) => (
             <div key={i} className={`fala ${f.papel} ${f.erro ? 'erro' : ''}`}>
-              <p>{f.conteudo}</p>
+              <p>{comNegrito(f.conteudo)}</p>
               {/* rastro visivel: mostra qual consulta embasou a resposta */}
+              {f.acoes?.map((a, j) => <Confirmar key={j} proposta={a} />)}
               {f.ferramentas && (
                 <footer className="fala-rastro">
                   {f.ferramentas.length > 0 ? (
@@ -128,4 +136,51 @@ export default function Chat() {
       </section>
     </>
   )
+}
+
+/** Proposta de mudanca do assistente: so e aplicada quando o usuario clica. */
+function Confirmar({ proposta }: { proposta: Proposta }) {
+  const [estado, setEstado] = useState<'pendente' | 'aplicando' | 'feito' | 'cancelado' | 'erro'>('pendente')
+  const [msg, setMsg] = useState('')
+
+  async function aplicar() {
+    setEstado('aplicando')
+    try {
+      const r = await moverCategoria(proposta.estabelecimentos, proposta.categoria)
+      setMsg(`${r.categorizadas} compras movidas para ${proposta.categoria}`)
+      setEstado('feito')
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'erro ao aplicar')
+      setEstado('erro')
+    }
+  }
+
+  return (
+    <div className={`proposta ${estado}`}>
+      <p>
+        Mover <strong>{proposta.compras}</strong> {proposta.compras === 1 ? 'compra' : 'compras'} de{' '}
+        <strong>{proposta.estabelecimentos.join(', ')}</strong> para <strong>{proposta.categoria}</strong>
+        {proposta.categoria_nova && ' (categoria nova)'}
+      </p>
+      {estado === 'pendente' && (
+        <div className="proposta-botoes">
+          <button className="botao primario pequeno" onClick={aplicar}>
+            confirmar
+          </button>
+          <button className="botao pequeno" onClick={() => setEstado('cancelado')}>
+            cancelar
+          </button>
+        </div>
+      )}
+      {estado === 'aplicando' && <p className="dica">aplicando…</p>}
+      {estado === 'feito' && <p className="proposta-ok">✓ {msg}</p>}
+      {estado === 'cancelado' && <p className="dica">cancelado, nada foi alterado</p>}
+      {estado === 'erro' && <p className="entrar-erro">{msg}</p>}
+    </div>
+  )
+}
+
+/** O modelo as vezes manda **negrito** mesmo instruido a nao usar: vira <strong>, nunca HTML cru. */
+function comNegrito(texto: string) {
+  return texto.split(/\*\*(.+?)\*\*/g).map((parte, i) => (i % 2 ? <strong key={i}>{parte}</strong> : parte))
 }

@@ -78,6 +78,7 @@ func Ferramentas() []Ferramenta {
 				"mes":   texto("mês no formato AAAA-MM"),
 				"busca": texto("trecho do nome do estabelecimento, ex.: BH (opcional)"),
 			}, "mes"),
+		ferramentaMudar(),
 		ferramenta("comparar_meses",
 			"Compara o gasto total e por categoria de dois meses.",
 			map[string]any{

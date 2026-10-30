@@ -71,6 +71,7 @@ func (s *Servidor) chat(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusOK, map[string]any{
 		"resposta":    loResp.Texto,
 		"ferramentas": loResp.Ferramentas,
+		"acoes":       loResp.Acoes,
 		"tokens":      loResp.Tokens,
 		"ms":          time.Since(ldInic).Milliseconds(),
 	})

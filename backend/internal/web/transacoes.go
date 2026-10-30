@@ -101,6 +101,10 @@ func filtroDaURL(r *http.Request) (financas.Filtro, error) {
 		}
 		loFilt.CategoriaID = &lnCate
 	}
+	// "Sem categoria" nao tem id: o clique nela no dashboard vem como sem_categoria=1
+	if loQuer.Get("sem_categoria") == "1" {
+		loFilt.SemCategoria = true
+	}
 
 	loFilt.Limite, _ = strconv.Atoi(loQuer.Get("limite"))
 	loFilt.Offset, _ = strconv.Atoi(loQuer.Get("offset"))

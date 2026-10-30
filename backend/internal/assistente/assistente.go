@@ -50,16 +50,17 @@ type Turno struct {
 
 // Resposta traz o texto e o rastro do que aconteceu, para a tela e para o eval
 type Resposta struct {
-	Texto       string   `json:"resposta"`
-	Ferramentas []string `json:"ferramentas"`
-	Tokens      int      `json:"tokens"`
-	Rodadas     int      `json:"rodadas"`
+	Texto       string     `json:"resposta"`
+	Ferramentas []string   `json:"ferramentas"`
+	Tokens      int        `json:"tokens"`
+	Rodadas     int        `json:"rodadas"`
+	Acoes       []Proposta `json:"acoes"` // mudancas sugeridas, aplicadas so com o clique do usuario
 }
 
 // Perguntar roda o laco de tool calling: o modelo pede ferramentas, o backend executa
 // e devolve o JSON, ate o modelo responder em texto.
 func (a *Assistente) Perguntar(ctx context.Context, paHist []Turno, pcPerg string) (Resposta, error) {
-	loResp := Resposta{Ferramentas: []string{}}
+	loResp := Resposta{Ferramentas: []string{}, Acoes: []Proposta{}}
 
 	laMens := []Mensagem{{Role: "system", Content: a.promptSistema()}}
 	laMens = append(laMens, historico(paHist)...)
@@ -83,11 +84,17 @@ func (a *Assistente) Perguntar(ctx context.Context, paHist []Turno, pcPerg strin
 		laMens = append(laMens, Mensagem{Role: "assistant", Content: loMens.Content, ToolCalls: loMens.ToolCalls})
 		for _, loCham := range loMens.ToolCalls {
 			loResp.Ferramentas = append(loResp.Ferramentas, loCham.Function.Name)
-			laMens = append(laMens, Mensagem{
-				Role:       "tool",
-				ToolCallID: loCham.ID,
-				Content:    executar(ctx, a.fonte, loCham.Function.Name, loCham.Function.Arguments),
-			})
+			var lcSaid string
+			if loCham.Function.Name == cFerrMudar {
+				var loProp *Proposta
+				lcSaid, loProp = propor(ctx, a.fonte, loCham.Function.Arguments)
+				if loProp != nil {
+					loResp.Acoes = append(loResp.Acoes, *loProp)
+				}
+			} else {
+				lcSaid = executar(ctx, a.fonte, loCham.Function.Name, loCham.Function.Arguments)
+			}
+			laMens = append(laMens, Mensagem{Role: "tool", ToolCallID: loCham.ID, Content: lcSaid})
 		}
 	}
 	return loResp, ErrSemResposta

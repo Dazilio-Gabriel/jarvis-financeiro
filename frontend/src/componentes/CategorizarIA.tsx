@@ -10,8 +10,6 @@ import {
 import { Cartao, Pill } from './Base'
 import { fmtBRL, useBusca } from '../util'
 
-const CORES = ['#e0803a', '#3aa0e0', '#9a7ae0', '#e03ab0', '#3ae0d0', '#e0c93a', '#e05a6a', '#38e07b']
-
 /**
  * Categorizacao automatica: a IA classifica o que reconhece (e cria regras para as proximas
  * faturas) e o que ela nao sabe vira pergunta aqui, uma por estabelecimento.
@@ -52,7 +50,7 @@ export default function CategorizarIA({
       if (valor === 'nova') {
         const nome = prompt(`Nome da nova categoria para ${estabelecimento} (ex.: Jogos):`)?.trim()
         if (!nome) return
-        const nova = await criarCategoria(nome, CORES[categorias.length % CORES.length])
+        const nova = await criarCategoria(nome, '') // o servidor escolhe uma cor que a familia nao usa
         id = nova.id
       }
       await responderPendencia(estabelecimento, id)

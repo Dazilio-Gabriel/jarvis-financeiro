@@ -29,10 +29,10 @@ var (
 	ErrSessaoExpirada  = errors.New("sessao expirada ou inexistente")
 	codigoDuplicadoSQL = uint16(1062)
 	alfabetoConvite    = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sem 0/O/1/I: codigo e lido em voz alta
-	categoriasIniciais = []struct{ nome, cor string }{
-		{"Alimentação", "#e0803a"}, {"Mercado", "#38e07b"}, {"Transporte", "#3aa0e0"},
-		{"Moradia", "#e0c93a"}, {"Saúde", "#e05a6a"}, {"Educação", "#3ae0d0"},
-		{"Lazer", "#9a7ae0"}, {"Assinaturas", "#e03ab0"}, {"Entrada", "#38e07b"}, {"Outros", "#6f8279"},
+	categoriasIniciais = []struct{ nome, cor string }{      // mesmas cores da migration 005
+		{"Mercado", "#3987e5"}, {"Alimentação", "#d95926"}, {"Transporte", "#199e70"},
+		{"Moradia", "#c98500"}, {"Lazer", "#d55181"}, {"Educação", "#008300"},
+		{"Assinaturas", "#9085e9"}, {"Saúde", "#e66767"}, {"Outros", "#8b9490"}, {"Entrada", "#7fa59a"},
 	}
 )
 

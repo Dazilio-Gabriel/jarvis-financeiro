@@ -238,8 +238,13 @@ func (s *Servidor) criarCategoria(w http.ResponseWriter, r *http.Request) {
 		erroJSON(w, http.StatusBadRequest, "nome da categoria: de 1 a 40 caracteres")
 		return
 	}
-	if !oReCor.MatchString(loCorp.Cor) {
-		loCorp.Cor = "#6f8279" // cor vira CSS na tela: so aceita #RRGGBB
+	if !oReCor.MatchString(loCorp.Cor) { // cor vira CSS na tela: so aceita #RRGGBB
+		laCate, err := s.dados(r).ListarCategorias(r.Context())
+		if err != nil {
+			erroInterno(w, err)
+			return
+		}
+		loCorp.Cor = financas.ProximaCor(laCate)
 	}
 	lnID, err := s.dados(r).CriarCategoria(r.Context(), loCorp.Nome, loCorp.Cor)
 	if errors.Is(err, armazenamento.ErrCategoriaExiste) {
@@ -264,4 +269,94 @@ func (s *Servidor) apagarRegra(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	responderJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// moverCategoria aplica a proposta que o usuario confirmou no chat: todas as compras dos
+// estabelecimentos vao para a categoria (criada se nao existir) e as regras sao trocadas.
+// So roda pelo clique do usuario; o modelo nao tem como chamar esta rota.
+func (s *Servidor) moverCategoria(w http.ResponseWriter, r *http.Request) {
+	var loCorp struct {
+		Estabelecimentos []string `json:"estabelecimentos"`
+		Categoria        string   `json:"categoria"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&loCorp); err != nil {
+		erroJSON(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+	loCorp.Categoria = strings.TrimSpace(loCorp.Categoria)
+	if loCorp.Categoria == "" || len([]rune(loCorp.Categoria)) > 40 || len(loCorp.Estabelecimentos) == 0 || len(loCorp.Estabelecimentos) > 50 {
+		erroJSON(w, http.StatusBadRequest, "informe a categoria e de 1 a 50 estabelecimentos")
+		return
+	}
+	ctx := r.Context()
+	loDado := s.dados(r)
+
+	// categoria: a que ja existe com esse nome (ignorando caixa e acento), ou uma nova
+	laCate, err := loDado.ListarCategorias(ctx)
+	if err != nil {
+		erroInterno(w, err)
+		return
+	}
+	var lnCate int64
+	for _, loCate := range laCate {
+		if util.NormText(loCate.Nome) == util.NormText(loCorp.Categoria) {
+			lnCate = loCate.ID
+		}
+	}
+	if lnCate == 0 {
+		if lnCate, err = loDado.CriarCategoria(ctx, loCorp.Categoria, financas.ProximaCor(laCate)); err != nil {
+			erroInterno(w, err)
+			return
+		}
+	}
+
+	loAlvo := map[string]bool{}
+	for _, lcEsta := range loCorp.Estabelecimentos {
+		loAlvo[util.NormText(lcEsta)] = true
+	}
+	laTran, err := loDado.Listar(ctx, financas.Filtro{SemLimite: true, Tipo: financas.Debito})
+	if err != nil {
+		erroInterno(w, err)
+		return
+	}
+	lnMuda := 0
+	for _, loTran := range laTran {
+		if !loAlvo[util.NormText(financas.NomeEstabelecimento(loTran.Descricao))] {
+			continue
+		}
+		lnId := lnCate
+		if err := loDado.Categorizar(ctx, loTran.ID, &lnId); err != nil {
+			erroInterno(w, err)
+			return
+		}
+		lnMuda++
+	}
+
+	// regra antiga do estabelecimento sai; a nova manda as proximas faturas para a categoria certa
+	laRegr, err := loDado.ListarRegras(ctx)
+	if err != nil {
+		erroInterno(w, err)
+		return
+	}
+	for _, loRegr := range laRegr {
+		if loAlvo[util.NormText(loRegr.Padrao)] {
+			if err := loDado.ApagarRegra(ctx, loRegr.ID); err != nil {
+				erroInterno(w, err)
+				return
+			}
+		}
+	}
+	for lcPadr := range loAlvo {
+		if len(lcPadr) < 3 {
+			continue
+		}
+		if _, err := loDado.CriarRegra(ctx, financas.RegraCategoria{
+			Padrao: lcPadr, CategoriaID: lnCate, Prioridade: len(lcPadr),
+		}); err != nil {
+			erroInterno(w, err)
+			return
+		}
+	}
+
+	responderJSON(w, http.StatusOK, map[string]any{"categorizadas": lnMuda, "categoria_id": lnCate})
 }

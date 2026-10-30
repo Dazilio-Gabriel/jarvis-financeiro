@@ -131,3 +131,8 @@ export function mesDoArquivo(nome: string) {
   const m = /(\d{4})-(\d{2})-\d{2}/.exec(nome)
   return m ? `${m[1]}-${m[2]}` : ''
 }
+
+/** Link para as transacoes de uma categoria num mes (categoria null = "Sem categoria"). */
+export function linkCategoria(categoriaID: number | null, mes: string) {
+  return `/transacoes?categoria=${categoriaID ?? 'sem'}&mes=${mes}`
+}

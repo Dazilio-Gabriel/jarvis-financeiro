@@ -1261,6 +1261,10 @@ code {
   gap: 0.5rem;
 }
 
+.tabela-estat td:first-child {
+  text-align: left;
+}
+
 /* flex na celula quebrava a borda da linha; a bolinha de cor fica inline */
 .tabela-estat td .dot {
   display: inline-block;
@@ -1628,6 +1632,60 @@ code {
 
 .regra-apagar:hover {
   color: var(--vermelho);
+}
+
+.linha.clicavel {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+  margin: 0 -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  transition: background 0.15s ease;
+}
+
+.linha.clicavel:hover {
+  background: var(--sup-verde);
+}
+
+.link-categoria {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link-categoria:hover {
+  color: var(--verde);
+  text-decoration: underline;
+}
+
+.proposta {
+  margin-top: 0.6rem;
+  border: 1px solid var(--amarelo-borda);
+  background: var(--sup-amarelo);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.proposta.feito {
+  border-color: var(--verde-borda);
+  background: var(--sup-verde);
+}
+
+.proposta p {
+  margin: 0;
+}
+
+.proposta-botoes {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.proposta-ok {
+  color: var(--verde);
+  margin-top: 0.3rem !important;
 }
 
 .usuario {

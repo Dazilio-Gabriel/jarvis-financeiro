@@ -1,15 +1,22 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { buscarCategorias, buscarTransacoes, categorizar } from '../api'
 import { Cabecalho, Cartao, Carregando, Erro, Pill, Vazio } from '../componentes/Base'
-import { fmtBRL, fmtData, mesCorrente, useBusca } from '../util'
+import { fmtBRL, fmtData, limitesMes, mesCorrente, useBusca } from '../util'
 
 const PAGINA = 50
 
 export default function Transacoes() {
-  const mes = mesCorrente()
+  // vindo do clique numa categoria (dashboard/estatisticas): ?categoria=ID|sem&mes=AAAA-MM
+  const [params] = useSearchParams()
+  const mesURL = params.get('mes')
+  const mes = mesURL && /^\d{4}-\d{2}$/.test(mesURL) ? limitesMes(mesURL) : mesCorrente()
+  const catURL = params.get('categoria')
   const [busca, setBusca] = useState('')
   const [buscaAplicada, setBuscaAplicada] = useState('')
-  const [categoria, setCategoria] = useState<number | ''>('')
+  const [categoria, setCategoria] = useState<number | '' | 'sem'>(
+    catURL === 'sem' ? 'sem' : catURL && Number(catURL) > 0 ? Number(catURL) : '',
+  )
   const [de, setDe] = useState(mes.de)
   const [ate, setAte] = useState(mes.ate)
   const [pagina, setPagina] = useState(0)
@@ -22,7 +29,8 @@ export default function Transacoes() {
           de,
           ate,
           busca: buscaAplicada || undefined,
-          categoria: categoria === '' ? undefined : categoria,
+          categoria: categoria === '' || categoria === 'sem' ? undefined : categoria,
+          sem_categoria: categoria === 'sem' ? 1 : undefined,
           limite: PAGINA,
           offset: pagina * PAGINA,
         },
@@ -89,10 +97,12 @@ export default function Transacoes() {
               value={categoria}
               onChange={(e) => {
                 setPagina(0)
-                setCategoria(e.target.value === '' ? '' : Number(e.target.value))
+                const v = e.target.value
+                setCategoria(v === '' ? '' : v === 'sem' ? 'sem' : Number(v))
               }}
             >
               <option value="">todas</option>
+              <option value="sem">sem categoria</option>
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nome}

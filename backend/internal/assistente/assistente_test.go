@@ -218,6 +218,37 @@ func TestVariacaoDizADirecao(t *testing.T) {
 	}
 }
 
+func TestMudarCategoriaSoPropoe(t *testing.T) {
+	loFont := novaFonte()
+	loFont.trans = []financas.Transacao{
+		{Descricao: "Steamgames.com 4259522985", Valor: -5000, Tipo: financas.Debito},
+		{Descricao: "STEAM PURCHASE", Valor: -2000, Tipo: financas.Debito},
+		{Descricao: "Nuuvem", Valor: -1000, Tipo: financas.Debito},
+	}
+	loMode := &modeloRoteiro{roteiro: []Mensagem{
+		pedido("c1", "mudar_categoria", `{"estabelecimento":"steam","categoria":"jogos"}`),
+		pedido("c2", "mudar_categoria", `{"estabelecimento":"mercado","categoria":"Mercado"}`),
+		pedido("c3", "mudar_categoria", `{"estabelecimento":"loja que nao existe","categoria":"X"}`),
+		{Role: "assistant", Content: "Clique em Confirmar."},
+	}}
+	loResp, err := Novo(loMode, loFont).Perguntar(context.Background(), nil, "steam e jogo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loResp.Acoes) != 1 {
+		t.Fatalf("acoes = %+v; esperado so a do Steam (mercado e loja inexistente nao tem compra)", loResp.Acoes)
+	}
+	loProp := loResp.Acoes[0]
+	if loProp.Compras != 2 || len(loProp.Estabelecimentos) != 2 || loProp.Categoria != "jogos" || !loProp.CategoriaNova {
+		t.Errorf("proposta = %+v", loProp)
+	}
+	// o modelo fica sabendo que nada foi alterado ainda
+	lcSaid := loMode.recebido[1][len(loMode.recebido[1])-1].Content
+	if !strings.Contains(lcSaid, "nada foi alterado") {
+		t.Errorf("retorno da ferramenta = %s", lcSaid)
+	}
+}
+
 func TestNenhumaFerramentaGrava(t *testing.T) {
 	for _, loFerr := range Ferramentas() {
 		lcNome := loFerr.Function.Name

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { buscarEstatisticas, type Estatisticas as Dados } from '../api'
 import { Cabecalho, Cartao, Carregando, Erro, Kpi, Pill, SeletorMes, Vazio } from '../componentes/Base'
-import { fmtBRL, mesAtual, NOMES_MES, rotuloMes, useBusca } from '../util'
+import { fmtBRL, linkCategoria, mesAtual, NOMES_MES, rotuloMes, useBusca } from '../util'
 
 const curtoMes = (mes: string) => {
   const [a, m] = mes.split('-')
@@ -151,7 +151,9 @@ export default function Estatisticas() {
               {d.categorias.map((c) => (
                 <li key={c.nome}>
                   <span className="dot" style={{ background: c.cor }} />
-                  <span className="legenda-nome">{c.nome}</span>
+                  <NavLink to={linkCategoria(c.categoria_id, d.mes)} className="legenda-nome link-categoria">
+                    {c.nome}
+                  </NavLink>
                   <span className="legenda-pct">
                     {d.saidas_centavos ? Math.round((c.total_centavos / d.saidas_centavos) * 100) : 0}%
                   </span>
@@ -202,7 +204,9 @@ export default function Estatisticas() {
               {d.categorias.map((c) => (
                 <tr key={c.nome}>
                   <td>
-                    <span className="dot" style={{ background: c.cor }} /> {c.nome}
+                    <NavLink to={linkCategoria(c.categoria_id, d.mes)} className="link-categoria">
+                      <span className="dot" style={{ background: c.cor }} /> {c.nome}
+                    </NavLink>
                   </td>
                   <td className="num">{fmtBRL(c.total_centavos)}</td>
                   <td className="num">{c.quantidade}</td>

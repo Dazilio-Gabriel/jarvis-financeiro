@@ -133,6 +133,7 @@ export type FiltroTransacoes = {
   de?: string
   ate?: string
   categoria?: number
+  sem_categoria?: number
   busca?: string
   tipo?: string
   limite?: number
@@ -198,6 +199,7 @@ export type Turno = { papel: 'usuario' | 'assistente'; conteudo: string }
 export type RespostaChat = {
   resposta: string
   ferramentas: string[]
+  acoes?: Proposta[]
   tokens: number
   ms: number
 }
@@ -340,3 +342,13 @@ export const criarCategoria = (nome: string, cor: string) =>
 
 export const apagarRegra = (id: number) =>
   pedir<{ ok: boolean }>(`/api/regras/${id}`, { method: 'DELETE' })
+
+export type Proposta = {
+  estabelecimentos: string[]
+  categoria: string
+  categoria_nova: boolean
+  compras: number
+}
+
+export const moverCategoria = (estabelecimentos: string[], categoria: string) =>
+  postarJSON<{ categorizadas: number }>('/api/categorizar/mover', { estabelecimentos, categoria })
