@@ -1,7 +1,9 @@
 -- Login com Google, ultimo acesso e uso da IA (painel do dono).
 
--- "sub" e o id estavel da conta Google; e-mail pode mudar, sub nao
-ALTER TABLE usuarios ADD COLUMN google_sub VARCHAR(64) NULL AFTER senha_hash, ADD UNIQUE KEY uk_usuarios_google (google_sub);
+-- "sub" e o id estavel da conta Google; e-mail pode mudar, sub nao.
+-- Coluna e indice em comandos separados: o TiDB nao indexa coluna criada no mesmo ALTER.
+ALTER TABLE usuarios ADD COLUMN google_sub VARCHAR(64) NULL AFTER senha_hash;
+ALTER TABLE usuarios ADD UNIQUE KEY uk_usuarios_google (google_sub);
 
 -- atualizado no maximo 1 vez por hora por usuario: o painel mostra quem esta usando
 ALTER TABLE usuarios ADD COLUMN ultimo_acesso DATETIME NULL;
@@ -15,4 +17,4 @@ CREATE TABLE IF NOT EXISTS uso_ia (
 
     PRIMARY KEY (dia, usuario_id),
     CONSTRAINT fk_uso_ia_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

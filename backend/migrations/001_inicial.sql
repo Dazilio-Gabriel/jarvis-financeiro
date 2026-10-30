@@ -1,6 +1,9 @@
 -- Jarvis Financeiro - schema inicial (MySQL 8.4)
 -- Rodar: mysql -u root -p --port=3307 jarvis < backend/migrations/001_inicial.sql
 --
+-- Collation explicita em toda tabela: busca ignora maiuscula e acento ("ifood" acha "IFOOD").
+-- Sem ela, o TiDB Cloud cria com utf8mb4_bin (sensivel a tudo) e a busca quebra em producao.
+--
 -- Dinheiro em centavos, num BIGINT. Nunca FLOAT: ponto flutuante nao representa
 -- 0,10 exatamente e o erro se acumula na soma.
 
@@ -13,7 +16,7 @@ CREATE TABLE IF NOT EXISTS categorias (
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_categorias_nome (nome)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 CREATE TABLE IF NOT EXISTS transacoes (
@@ -41,7 +44,7 @@ CREATE TABLE IF NOT EXISTS transacoes (
     CONSTRAINT fk_transacoes_categoria
         FOREIGN KEY (categoria_id) REFERENCES categorias(id)
         ON DELETE SET NULL
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 -- categorizacao automatica: descricao casando com o padrao recebe a categoria
@@ -57,7 +60,7 @@ CREATE TABLE IF NOT EXISTS regras_categoria (
     CONSTRAINT fk_regras_categoria
         FOREIGN KEY (categoria_id) REFERENCES categorias(id)
         ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 -- historico do chat (Fase 4)
@@ -69,7 +72,7 @@ CREATE TABLE IF NOT EXISTS conversas (
 
     PRIMARY KEY (id),
     KEY idx_conversas_criado_em (criado_em)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 -- registro de cada importacao, para auditoria e para o front mostrar o historico
@@ -86,7 +89,7 @@ CREATE TABLE IF NOT EXISTS importacoes (
 
     PRIMARY KEY (id),
     KEY idx_importacoes_criado_em (criado_em)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 INSERT IGNORE INTO categorias (nome, cor) VALUES

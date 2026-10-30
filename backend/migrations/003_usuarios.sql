@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS familias (
 
     PRIMARY KEY (id),
     UNIQUE KEY uk_familias_convite (codigo_convite)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS usuarios (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     PRIMARY KEY (id),
     UNIQUE KEY uk_usuarios_email (email),
     CONSTRAINT fk_usuarios_familia FOREIGN KEY (familia_id) REFERENCES familias(id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- guarda so o sha256 do token: quem ler o banco nao consegue usar a sessao de ninguem
 CREATE TABLE IF NOT EXISTS sessoes (
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS sessoes (
     PRIMARY KEY (token_hash),
     KEY idx_sessoes_usuario (usuario_id),
     CONSTRAINT fk_sessoes_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT IGNORE INTO familias (id, nome, codigo_convite)
 VALUES (1, 'Minha família', UPPER(SUBSTRING(MD5(RAND()), 1, 10)));
