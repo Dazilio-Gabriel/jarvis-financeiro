@@ -16,8 +16,13 @@ type Config struct {
 	APIToken  string // protege /api/integracao/* (n8n, automacoes)
 	IntegFami int64  // familia dona do que chega pela integracao
 	Producao  bool   // atras de HTTPS garantido (Render): cookie Secure e HSTS sempre
-	DonoEmail string // unico e-mail que assume a familia 1 (dados de antes do login)
-	ClaudeKey string
+	DonoEmail string // unico e-mail que assume a familia 1 e ve o painel de administracao
+
+	// "Entrar com Google": credencial OAuth do Google Cloud; URLPublica monta o endereco de retorno
+	GoogleID   string
+	GoogleSegr string
+	URLPublica string
+	ClaudeKey  string
 
 	// LLM: qualquer API compativel com a da OpenAI. Padrao GroqCloud; LLM_* troca de provedor
 	// (Gemini, Cerebras, OpenRouter) sem mexer no codigo. GROQ_* fica por compatibilidade.
@@ -38,18 +43,22 @@ func Carregar(pcCami string) Config {
 
 	return Config{
 		// PORT e o nome que Render/Railway/Fly usam; PORTA e o do .env local
-		Porta:     ou(os.Getenv("PORT"), ou(os.Getenv("PORTA"), "8080")),
-		DSN:       os.Getenv("MYSQL_DSN"),
-		MySQLCA:   os.Getenv("MYSQL_CA"),
-		Migrar:    os.Getenv("MIGRAR_NA_SUBIDA") == "1",
-		APIToken:  os.Getenv("API_TOKEN"),
-		IntegFami: lnFami,
-		Producao:  os.Getenv("PRODUCAO") == "1",
-		DonoEmail: os.Getenv("DONO_EMAIL"),
-		ClaudeKey: os.Getenv("ANTHROPIC_API_KEY"),
-		LLMURL:    os.Getenv("LLM_URL"),
-		LLMChave:  ou(os.Getenv("LLM_CHAVE"), os.Getenv("GROQ_API_KEY")),
-		LLMModelo: ou(os.Getenv("LLM_MODELO"), os.Getenv("GROQ_MODELO")),
+		Porta:      ou(os.Getenv("PORT"), ou(os.Getenv("PORTA"), "8080")),
+		DSN:        os.Getenv("MYSQL_DSN"),
+		MySQLCA:    os.Getenv("MYSQL_CA"),
+		Migrar:     os.Getenv("MIGRAR_NA_SUBIDA") == "1",
+		APIToken:   os.Getenv("API_TOKEN"),
+		IntegFami:  lnFami,
+		Producao:   os.Getenv("PRODUCAO") == "1",
+		DonoEmail:  os.Getenv("DONO_EMAIL"),
+		GoogleID:   os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleSegr: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		// Render preenche RENDER_EXTERNAL_URL sozinho; local, o Vite (5173) repassa /api para o Go
+		URLPublica: ou(os.Getenv("URL_PUBLICA"), ou(os.Getenv("RENDER_EXTERNAL_URL"), "http://localhost:5173")),
+		ClaudeKey:  os.Getenv("ANTHROPIC_API_KEY"),
+		LLMURL:     os.Getenv("LLM_URL"),
+		LLMChave:   ou(os.Getenv("LLM_CHAVE"), os.Getenv("GROQ_API_KEY")),
+		LLMModelo:  ou(os.Getenv("LLM_MODELO"), os.Getenv("GROQ_MODELO")),
 	}
 }
 

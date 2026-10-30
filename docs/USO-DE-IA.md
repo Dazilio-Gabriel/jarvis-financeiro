@@ -198,3 +198,19 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   1 alto, 7 médios, vários baixos, todos corrigidos ou registrados como risco aceito). Testes de
   ataque explícitos (SQL injection, path traversal, CSRF, IP forjado, corpo gigante). Go 1.26.10.
 - **Revisão humana:** _(preencher)_
+
+### 2026-10-30 — Login com Google e painel de administração
+- **Quem:** Gabriel Dazilio Fanchiotti
+- **Ferramenta:** Claude Code (modelo Claude Opus 5.5)
+- **Prompt (literal):**
+  > consegue ja colocar tbm um logar com o google? nao sei se isso é muito dificil
+
+  > outra coisa super improtante, como sou o dono, preciso de um dashboard tbm com base em nivel
+  > de acesso, para eu conseguir ver informacoes gerais, digo o meu acesso aparecer esse menu novo,
+  > entendeu?
+- **Resultado:** migration 004 (`google_sub`, `ultimo_acesso`, `uso_ia`); "Entrar com Google"
+  (OAuth 2.0 + PKCE, `golang.org/x/oauth2`, sem SDK do Google Cloud); painel `/admin` só para o
+  `DONO_EMAIL`, com números da operação e **sem dado financeiro** de família (decisão de LGPD);
+  registro de uso da IA por usuário; testes com Google falso e de acesso ao painel; teste ponta a
+  ponta no navegador (que pegou e corrigiu um defeito da proteção de CSRF atrás de proxy).
+- **Revisão humana:** _(preencher)_

@@ -9,6 +9,7 @@ import Chat from './paginas/Chat'
 import Estatisticas from './paginas/Estatisticas'
 import Entrar from './paginas/Entrar'
 import Familia from './paginas/Familia'
+import Admin from './paginas/Admin'
 import './App.css'
 
 type Conexao = 'carregando' | 'ok' | 'erro'
@@ -64,7 +65,11 @@ export default function App() {
   return <Logado usuario={usuario} aoSair={() => setUsuario(null)} />
 }
 
+// so o dono ve; a API confere de novo (usuario comum que forcar a rota recebe 404)
+const MENU_ADMIN = { rota: '/admin', icone: '▲', nome: 'Administração', desc: 'visão do sistema' }
+
 function Logado({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }) {
+  const itens = usuario.admin ? [...MENU, MENU_ADMIN] : MENU
   const [conexao, setConexao] = useState<Conexao>('carregando')
   const [banco, setBanco] = useState('')
   const [menuAberto, setMenuAberto] = useState(false)
@@ -103,7 +108,7 @@ function Logado({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }) {
         </div>
 
         <nav className="nav">
-          {MENU.map((item, i) => (
+          {itens.map((item, i) => (
             <NavLink
               key={item.rota}
               to={item.rota}
@@ -175,6 +180,7 @@ function Logado({ usuario, aoSair }: { usuario: Usuario; aoSair: () => void }) {
             <Route path="/chat" element={<Chat />} />
             <Route path="/estatisticas" element={<Estatisticas />} />
             <Route path="/familia" element={<Familia />} />
+            {usuario.admin && <Route path="/admin" element={<Admin />} />}
             <Route path="*" element={<NaoEncontrado />} />
           </Routes>
         </div>

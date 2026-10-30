@@ -220,3 +220,42 @@ func TestIntegracaoFamiliasIsoladasESessao(t *testing.T) {
 		t.Errorf("sessao continuou valida depois do logout: %v", err)
 	}
 }
+
+func TestIntegracaoGooglePainel(t *testing.T) {
+	loRepo := abrirTeste(t)
+	ctx := context.Background()
+	lcMail := fmt.Sprintf("g-%d@jarvis.local", time.Now().UnixNano())
+
+	loSenh, err := loRepo.Cadastrar(ctx, "Com Senha", lcMail, "hash", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		loRepo.db.Exec(`DELETE FROM usuarios WHERE id = ?`, loSenh.ID)
+		loRepo.db.Exec(`DELETE FROM categorias WHERE familia_id = ?`, loSenh.FamiliaID)
+		loRepo.db.Exec(`DELETE FROM familias WHERE id = ?`, loSenh.FamiliaID)
+	})
+
+	// mesmo e-mail verificado pelo Google: liga a conta existente em vez de criar outra
+	loGoog, err := loRepo.EntrarComGoogle(ctx, "sub-"+lcMail, lcMail, "Outro Nome", "", false)
+	if err != nil || loGoog.ID != loSenh.ID {
+		t.Fatalf("Google com e-mail existente: %+v, %v", loGoog, err)
+	}
+	// segunda vez entra pelo sub, mesmo que o e-mail mude no Google
+	loDeNo, err := loRepo.EntrarComGoogle(ctx, "sub-"+lcMail, "mudou-"+lcMail, "X", "", false)
+	if err != nil || loDeNo.ID != loSenh.ID {
+		t.Errorf("Google pelo sub: %+v, %v", loDeNo, err)
+	}
+
+	if err := loRepo.RegistrarUsoIA(ctx, loSenh.ID, 1500); err != nil {
+		t.Fatal(err)
+	}
+	loRepo.RegistrarUsoIA(ctx, loSenh.ID, 500)
+	loPain, err := loRepo.PainelAdmin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loPain.Usuarios < 1 || loPain.ComGoogle < 1 || loPain.PerguntasHoje < 2 || loPain.TokensHoje < 2000 {
+		t.Errorf("painel = %+v", loPain)
+	}
+}

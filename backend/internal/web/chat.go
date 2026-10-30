@@ -61,6 +61,10 @@ func (s *Servidor) chat(w http.ResponseWriter, r *http.Request) {
 		erroJSON(w, http.StatusBadGateway, "o assistente nao conseguiu responder agora, tente de novo")
 		return
 	}
+	// uso da IA por usuario, para o painel do dono acompanhar a cota gratuita
+	if err := s.auth.RegistrarUsoIA(r.Context(), usuarioDe(r).ID, loResp.Tokens); err != nil {
+		log.Printf("registrar uso da IA: %v", err)
+	}
 	log.Printf("chat: ferramentas=%v tokens=%d rodadas=%d (%s)",
 		loResp.Ferramentas, loResp.Tokens, loResp.Rodadas, time.Since(ldInic))
 

@@ -1255,11 +1255,17 @@ code {
   font-size: 0.85rem;
 }
 
-.legenda li,
-.tabela-estat td:first-child {
+.legenda li {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* flex na celula quebrava a borda da linha; a bolinha de cor fica inline */
+.tabela-estat td .dot {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.45rem;
 }
 
 .legenda-nome {
@@ -1475,6 +1481,62 @@ code {
   align-items: center;
   gap: 0.45rem;
   cursor: pointer;
+}
+
+.ou {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--txt-fraco);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.ou::before,
+.ou::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--borda);
+}
+
+.botao.google {
+  justify-content: center;
+  padding: 0.65rem;
+  background: #fff;
+  color: #1f1f1f;
+  border-color: #dadce0;
+  font-weight: 600;
+}
+
+.botao.google:hover {
+  background: #f1f3f4;
+  border-color: #dadce0;
+}
+
+.google-g {
+  font-weight: 800;
+  color: #4285f4;
+}
+
+.serie {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+}
+
+.serie-barra {
+  flex: 1;
+  background: var(--verde);
+  opacity: 0.8;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+
+.serie-barra:hover {
+  opacity: 1;
 }
 
 .usuario {

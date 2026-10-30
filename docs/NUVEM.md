@@ -13,7 +13,9 @@ depender do PC de casa ligado. Tudo no plano gratuito.
 | 4 | **Hospedagem**: Render com deploy automático a cada push | ✅ `render.yaml` pronto · ⏳ falta conectar a conta |
 | 5 | **IA grátis**: Groq como padrão; qualquer provedor compatível por variável | ✅ pronto |
 | 6 | Levar os seus dados do PC para a nuvem (exportar/importar) | ⏳ depois do 3 (instruções abaixo) |
-| 7 | Próximos: PWA (ícone no celular), backup automático, troca de senha, sair de todos os dispositivos | 📋 backlog |
+| 7 | **Entrar com Google** (OAuth com PKCE) | ✅ pronto · ⏳ falta criar a credencial no Google Cloud (passo 4 abaixo) |
+| 8 | **Painel de administração** (só o dono): usuários, famílias, uso da IA — sem dado financeiro | ✅ pronto |
+| 9 | Próximos: PWA (ícone no celular), backup automático, troca de senha, sair de todos os dispositivos | 📋 backlog |
 
 ---
 
@@ -96,7 +98,30 @@ Antes de trocar de vez, rode o eval com o provedor novo (`go run ./cmd/eval`) e 
 
 A partir daí, todo `git push` na `main` publica a versão nova sozinho.
 
-### 3. Levar os seus dados do PC para a nuvem
+### 3. Entrar com Google (opcional, uns 10 minutos)
+1. https://console.cloud.google.com → crie um projeto (ex.: `jarvis-financeiro`).
+2. **APIs e serviços → Tela de consentimento OAuth**: tipo **Externo**, nome "Jarvis Financeiro",
+   seu e-mail de suporte. Escopos: só os básicos (`email`, `profile`, `openid`), que **não exigem
+   verificação do Google**. Depois, **Publicar app** (em "teste" só os e-mails cadastrados entram).
+3. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**:
+   - URIs de redirecionamento autorizados:
+     - `https://SEU-APP.onrender.com/api/auth/google/retorno`
+     - `http://localhost:5173/api/auth/google/retorno` (para testar no PC)
+4. Copie o **ID do cliente** e a **chave secreta** para `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`
+   no Render (e no `backend\.env` para o PC). O Render já informa a própria URL ao servidor
+   (`RENDER_EXTERNAL_URL`); se usar domínio próprio, defina `URL_PUBLICA`.
+
+Como funciona: o Jarvis só aceita conta Google com **e-mail verificado**. Se já existir usuário
+com o mesmo e-mail (cadastrado com senha), a conta Google é ligada a ele. O botão só aparece na tela
+de login quando as duas variáveis estão configuradas.
+
+### 4. Painel de administração
+Quem entra com o e-mail de `DONO_EMAIL` vê o menu **Administração**: usuários, famílias,
+cadastros por dia, quem está ativo, uso e tokens da IA e a lista de usuários. Para todos os outros
+o menu não existe e a API responde 404. O painel **não mostra valores, saldos nem descrições** de
+nenhuma família: o dado financeiro é de cada família (LGPD); o dono vê só a operação.
+
+### 5. Levar os seus dados do PC para a nuvem
 O jeito mais simples e seguro: **importar de novo as faturas** (CSV) pela tela de importação já
 na nuvem. Os CSVs não vão para o GitHub (o `.gitignore` bloqueia).
 

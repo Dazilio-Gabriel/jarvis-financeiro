@@ -24,6 +24,21 @@ que ficou como risco aceito. Revisão em 30/10/2026.
 | Baixa | Cookie `Secure` dependia de cabecalho do cliente; token da integração comparado com `!=` | `PRODUCAO=1` força `Secure` e HSTS; comparação em tempo constante | — |
 | Baixa | Deploy publicava antes da CI terminar | `autoDeployTrigger: checksPass` no Render | — |
 
+## Login com Google e painel do dono (implementados depois da revisão)
+
+- **Google (OAuth 2.0 com PKCE):** `state` aleatório conferido em tempo constante (CSRF no
+  retorno), `code_verifier` PKCE (code roubado não serve), cookie do fluxo `HttpOnly` de uso único
+  e 10 minutos, só e-mail **verificado** pelo Google, conta identificada pelo `sub` (estável).
+  Testado: state forjado, sem cookie, code inválido, e-mail não verificado, cancelamento
+  (`TestRetornoGoogleRecusado`).
+- **Painel do dono:** acesso pelo e-mail do `DONO_EMAIL` conferido no **servidor** a cada
+  requisição; o menu é só conveniência. Usuário comum recebe 404 (nem confirma que a rota
+  existe). O painel não devolve nenhum dado financeiro (`TestPainelSoParaODono`).
+- O teste de ponta a ponta no navegador pegou um defeito real da proteção de CSRF: atrás de proxy
+  (o Vite em desenvolvimento) a `Origin` difere do host e o login legítimo era recusado. Correção:
+  quando o navegador manda `Sec-Fetch-Site` (que página nenhuma consegue forjar), vale ele; a
+  `Origin` só é usada em navegador antigo.
+
 ## O que já estava certo (conferido pelos revisores)
 
 - **SQL injection:** toda consulta é parametrizada (`?`); nenhum valor do usuário é concatenado no

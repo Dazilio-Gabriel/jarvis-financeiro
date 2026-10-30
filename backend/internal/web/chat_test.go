@@ -36,6 +36,8 @@ type authFalso struct {
 	senhas   map[string]string
 	sessoes  map[string]armazenamento.Usuario
 	dono     bool // o ultimo cadastro podia assumir a familia 1?
+	google   string
+	usoIA    int
 }
 
 func novoAuthFalso() *authFalso {
@@ -48,6 +50,29 @@ func (a *authFalso) FamiliaDoConvite(_ context.Context, pcConv string) (string, 
 		return "Família da Ana", nil
 	}
 	return "", armazenamento.ErrConviteInvalido
+}
+
+func (a *authFalso) EntrarComGoogle(_ context.Context, pcGoog, pcMail, pcNome, pcConv string, llDono bool) (armazenamento.Usuario, error) {
+	a.dono = llDono
+	if pcConv != "" && pcConv != "CONVITE123" {
+		return armazenamento.Usuario{}, armazenamento.ErrConviteInvalido
+	}
+	if loUsua, llExis := a.usuarios[pcMail]; llExis {
+		return loUsua, nil
+	}
+	loUsua := armazenamento.Usuario{ID: int64(len(a.usuarios) + 2), FamiliaID: 30, Nome: pcNome, Email: pcMail}
+	a.usuarios[pcMail] = loUsua
+	a.google = pcGoog
+	return loUsua, nil
+}
+
+func (a *authFalso) RegistrarUsoIA(_ context.Context, pnUsua int64, pnToke int) error {
+	a.usoIA += pnToke
+	return nil
+}
+
+func (a *authFalso) PainelAdmin(context.Context) (armazenamento.Painel, error) {
+	return armazenamento.Painel{Usuarios: 7}, nil
 }
 
 func (a *authFalso) NovoConvite(context.Context, int64) (string, error) {
@@ -358,10 +383,18 @@ func TestBarraRequisicaoDeOutroSite(t *testing.T) {
 		{"navegador antigo, Origin de fora", "Origin", "https://golpe.example", true},
 		{"o proprio site", "Sec-Fetch-Site", "same-origin", false},
 		{"Origin do proprio host", "Origin", "http://example.com", false},
+		// atras do proxy do Vite: o navegador diz same-origin e a Origin e a porta do Vite
+		{"dev atras do proxy", "Sec-Fetch-Site+Origin", "same-origin|http://localhost:5173", false},
+		{"cross-site com Origin igual nao engana", "Sec-Fetch-Site+Origin", "cross-site|http://example.com", true},
 	}
 	for _, c := range casos {
 		loReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"email":"a@b.com","senha":"x"}`))
-		loReq.Header.Set(c.cabe, c.valor)
+		if lcSite, lcOrig, llDois := strings.Cut(c.valor, "|"); llDois {
+			loReq.Header.Set("Sec-Fetch-Site", lcSite)
+			loReq.Header.Set("Origin", lcOrig)
+		} else {
+			loReq.Header.Set(c.cabe, c.valor)
+		}
 		loRec := httptest.NewRecorder()
 		loServ.Rotas().ServeHTTP(loRec, loReq)
 		if (loRec.Code == http.StatusForbidden) != c.barra {

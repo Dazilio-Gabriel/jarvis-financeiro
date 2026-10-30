@@ -60,6 +60,19 @@ if ($env:JARVIS_GROQ_INICIAL) {
     $Linhas + "GROQ_API_KEY=$($env:JARVIS_GROQ_INICIAL)" | Set-Content $Env -Encoding Ascii
 }
 
+# ---------------------------------------------------------------- 4b. dono
+# so o DONO_EMAIL assume os dados de antes do login e ve o menu Administracao
+if (-not (Select-String -Path $Env -Pattern '^DONO_EMAIL=\S+' -Quiet)) {
+    Passo "E-mail do dono"
+    $Dono = (Read-Host "Seu e-mail (o mesmo que voce vai usar para entrar no Jarvis)").Trim()
+    if ($Dono -match '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+        $Linhas = Get-Content $Env | Where-Object { $_ -notmatch '^DONO_EMAIL=' }
+        $Linhas + "DONO_EMAIL=$Dono" | Set-Content $Env -Encoding Ascii
+    } else {
+        Write-Host "E-mail invalido; sem DONO_EMAIL ninguem ve o menu Administracao. Edite backend\.env depois." -ForegroundColor Yellow
+    }
+}
+
 # ---------------------------------------------------------------- 5. frontend
 if (-not (Test-Path (Join-Path $Raiz "frontend\node_modules"))) {
     Passo "Instalando dependencias do frontend (npm install)"

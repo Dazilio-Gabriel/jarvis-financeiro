@@ -32,6 +32,9 @@ type autenticador interface {
 	Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv string, llDono bool) (armazenamento.Usuario, error)
 	FamiliaDoConvite(ctx context.Context, pcConv string) (string, error)
 	NovoConvite(ctx context.Context, pnFami int64) (string, error)
+	EntrarComGoogle(ctx context.Context, pcGoog, pcMail, pcNome, pcConv string, llDono bool) (armazenamento.Usuario, error)
+	RegistrarUsoIA(ctx context.Context, pnUsua int64, pnToke int) error
+	PainelAdmin(ctx context.Context) (armazenamento.Painel, error)
 	SenhaDoEmail(ctx context.Context, pcMail string) (armazenamento.Usuario, string, error)
 	CriarSessao(ctx context.Context, pnUsua int64, pcHash string, pdExpi time.Time) error
 	Sessao(ctx context.Context, pcHash string) (armazenamento.Usuario, error)
@@ -131,11 +134,12 @@ type usuarioDTO struct {
 	Email   string `json:"email"`
 	Familia string `json:"familia"`
 	Convite string `json:"convite,omitempty"`
+	Admin   bool   `json:"admin,omitempty"` // so liga o menu; a rota confere de novo no servidor
 }
 
-func paraUsuarioDTO(poUsua armazenamento.Usuario) usuarioDTO {
+func (s *Servidor) paraUsuarioDTO(poUsua armazenamento.Usuario) usuarioDTO {
 	return usuarioDTO{ID: poUsua.ID, Nome: poUsua.Nome, Email: poUsua.Email,
-		Familia: poUsua.FamiliaNome, Convite: poUsua.Convite}
+		Familia: poUsua.FamiliaNome, Convite: poUsua.Convite, Admin: s.ehAdmin(poUsua)}
 }
 
 type pedidoAuth struct {
@@ -209,7 +213,7 @@ func (s *Servidor) cadastrar(w http.ResponseWriter, r *http.Request) {
 		erroJSON(w, http.StatusInternalServerError, "cadastrado, mas o login falhou; entre de novo")
 		return
 	}
-	responderJSON(w, http.StatusCreated, paraUsuarioDTO(loUsua))
+	responderJSON(w, http.StatusCreated, s.paraUsuarioDTO(loUsua))
 }
 
 // hash de referencia para quando o e-mail nao existe: o bcrypt roda do mesmo jeito e o tempo de
@@ -254,7 +258,7 @@ func (s *Servidor) entrar(w http.ResponseWriter, r *http.Request) {
 		erroJSON(w, http.StatusInternalServerError, "erro ao abrir a sessão")
 		return
 	}
-	responderJSON(w, http.StatusOK, paraUsuarioDTO(loUsua))
+	responderJSON(w, http.StatusOK, s.paraUsuarioDTO(loUsua))
 }
 
 func (s *Servidor) sair(w http.ResponseWriter, r *http.Request) {
@@ -269,7 +273,7 @@ func (s *Servidor) sair(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Servidor) eu(w http.ResponseWriter, r *http.Request) {
-	responderJSON(w, http.StatusOK, paraUsuarioDTO(usuarioDe(r)))
+	responderJSON(w, http.StatusOK, s.paraUsuarioDTO(usuarioDe(r)))
 }
 
 func (s *Servidor) familia(w http.ResponseWriter, r *http.Request) {

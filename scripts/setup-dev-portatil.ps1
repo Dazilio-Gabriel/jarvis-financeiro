@@ -131,6 +131,8 @@ API_TOKEN=jarvis_token_dev_troque_isso
 # chave gratuita em https://console.groq.com/keys
 GROQ_API_KEY=
 GROQ_MODELO=openai/gpt-oss-120b
+# seu e-mail: assume os dados de antes do login e ve o menu Administracao
+DONO_EMAIL=
 "@ | Set-Content -Path $Env -Encoding Ascii
 }
 

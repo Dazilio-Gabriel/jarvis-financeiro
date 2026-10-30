@@ -53,7 +53,11 @@ func main() {
 
 	loWeb := web.NovoServidor(loRepo, loConf.APIToken).
 		ComFamiliaIntegracao(loConf.IntegFami).
-		ComProducao(loConf.Producao, loConf.DonoEmail)
+		ComProducao(loConf.Producao, loConf.DonoEmail).
+		ComGoogle(loConf.GoogleID, loConf.GoogleSegr, loConf.URLPublica)
+	if loConf.GoogleID != "" {
+		log.Printf("login com Google ligado (retorno em %s/api/auth/google/retorno)", loConf.URLPublica)
+	}
 	if loConf.Producao && loConf.DonoEmail == "" {
 		log.Println("AVISO: PRODUCAO sem DONO_EMAIL: ninguem assume a familia 1 (os dados de antes do login)")
 	}

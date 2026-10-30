@@ -23,6 +23,10 @@ services:
       - key: PRODUCAO
         value: "1" # cookie sempre Secure e HSTS forte, sem depender de cabecalho do cliente
       - key: DONO_EMAIL
-        sync: false # SEU e-mail: so ele pode assumir a familia 1 (com os dados importados)
+        sync: false # SEU e-mail: assume a familia 1 (dados importados) e ve o painel de administracao
+      - key: GOOGLE_CLIENT_ID
+        sync: false # opcional: "Entrar com Google" (ver docs/NUVEM.md)
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: API_TOKEN
         generateValue: true # token da integracao (n8n), gerado pelo Render

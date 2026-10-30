@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react'
-import { cadastrar, consultarConvite, entrar, type Usuario } from '../api'
+import { buscarConfigAuth, cadastrar, consultarConvite, entrar, type Usuario } from '../api'
 
 type Modo = 'entrar' | 'cadastrar'
+
+// o servidor volta do Google com ?erro_google=<motivo> quando algo da errado
+const ERROS_GOOGLE: Record<string, string> = {
+  cancelado: 'Login com Google cancelado.',
+  expirou: 'O login com Google demorou demais. Tente de novo.',
+  invalido: 'Não foi possível confirmar o login com o Google. Tente de novo.',
+  'email-nao-verificado': 'Seu e-mail no Google não está verificado.',
+  convite: 'Código de convite não encontrado.',
+  desligado: 'Login com Google não está configurado neste servidor.',
+  erro: 'Erro ao entrar com o Google. Tente de novo.',
+}
 
 export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void }) {
   const [modo, setModo] = useState<Modo>('entrar')
@@ -10,8 +21,20 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
   const [senha, setSenha] = useState('')
   // convite vem do link "?convite=ABC" que um membro da familia compartilha
   const [convite, setConvite] = useState(() => new URLSearchParams(location.search).get('convite') ?? '')
-  const [erro, setErro] = useState('')
+  const [erro, setErro] = useState(() => {
+    const motivo = new URLSearchParams(location.search).get('erro_google')
+    return motivo ? (ERROS_GOOGLE[motivo] ?? ERROS_GOOGLE.erro) : ''
+  })
   const [enviando, setEnviando] = useState(false)
+  const [temGoogle, setTemGoogle] = useState(false)
+
+  useEffect(() => {
+    const controle = new AbortController()
+    buscarConfigAuth(controle.signal)
+      .then((c) => setTemGoogle(c.google))
+      .catch(() => setTemGoogle(false))
+    return () => controle.abort()
+  }, [])
   // nome da familia do convite: quem recebe um link sabe em qual familia vai entrar antes de
   // confirmar (sem isso, um golpista mandaria o proprio convite e leria os extratos da vitima)
   // guardados junto com o codigo a que se referem: trocou o codigo, o nome e a confirmacao caem
@@ -144,6 +167,30 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
             {enviando ? 'aguarde…' : modo === 'entrar' ? 'entrar' : 'criar conta'}
           </button>
         </form>
+
+        {temGoogle && (
+          <>
+            <div className="ou">
+              <span>ou</span>
+            </div>
+            {/* link e nao fetch: o Google precisa da navegacao de pagina inteira */}
+            <a
+              className="botao google"
+              href={`/api/auth/google${codigo && conviteConfirmado ? `?convite=${encodeURIComponent(codigo)}` : ''}`}
+              onClick={(e) => {
+                if (modo === 'cadastrar' && codigo && !conviteConfirmado) {
+                  e.preventDefault()
+                  setErro('confirme que conhece quem enviou o convite, ou apague o código')
+                }
+              }}
+            >
+              <span className="google-g" aria-hidden="true">
+                G
+              </span>
+              {modo === 'cadastrar' ? 'criar conta com Google' : 'entrar com Google'}
+            </a>
+          </>
+        )}
 
         <p className="dica">
           {modo === 'cadastrar'

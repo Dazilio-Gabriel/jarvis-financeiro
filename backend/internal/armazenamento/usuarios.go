@@ -53,45 +53,30 @@ func gerarConvite() (string, error) {
 //     antes do login existir (quem decide se o e-mail e o do dono e a camada web, pelo DONO_EMAIL);
 //   - senao: cria uma familia nova, com as categorias iniciais.
 func (m *MySQL) Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv string, llDono bool) (Usuario, error) {
+	return m.criarUsuario(ctx, pcNome, pcMail, pcHash, "", pcConv, llDono)
+}
+
+// criarUsuario grava o usuario na familia certa. pcGoog e o "sub" da conta Google (vazio no
+// cadastro por senha); pcHash fica vazio no cadastro pelo Google, e login por senha nunca casa.
+func (m *MySQL) criarUsuario(ctx context.Context, pcNome, pcMail, pcHash, pcGoog, pcConv string, llDono bool) (Usuario, error) {
 	loTx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Usuario{}, err
 	}
 	defer loTx.Rollback()
 
-	var lnFami int64
-	switch {
-	case strings.TrimSpace(pcConv) != "":
-		err := loTx.QueryRowContext(ctx, `SELECT id FROM familias WHERE codigo_convite = ?`,
-			strings.ToUpper(strings.TrimSpace(pcConv))).Scan(&lnFami)
-		if errors.Is(err, sql.ErrNoRows) {
-			return Usuario{}, ErrConviteInvalido
-		}
-		if err != nil {
-			return Usuario{}, err
-		}
-
-	default:
-		// trava a familia 1 ANTES de contar: dois cadastros simultaneos nao caem os dois nela
-		var lnExis int64
-		errF := loTx.QueryRowContext(ctx, `SELECT id FROM familias WHERE id = 1 FOR UPDATE`).Scan(&lnExis)
-		var lnUsua int
-		if err := loTx.QueryRowContext(ctx, `SELECT COUNT(*) FROM usuarios`).Scan(&lnUsua); err != nil {
-			return Usuario{}, err
-		}
-		if lnUsua == 0 && errF == nil && llDono {
-			lnFami = 1
-		} else {
-			lnFami, err = criarFamilia(ctx, loTx, "Família de "+primeiroNome(pcNome))
-			if err != nil {
-				return Usuario{}, err
-			}
-		}
+	lnFami, err := escolherFamilia(ctx, loTx, pcNome, pcConv, llDono)
+	if err != nil {
+		return Usuario{}, err
 	}
 
+	var loGoog any
+	if pcGoog != "" {
+		loGoog = pcGoog
+	}
 	loRes, err := loTx.ExecContext(ctx,
-		`INSERT INTO usuarios (familia_id, nome, email, senha_hash) VALUES (?, ?, ?, ?)`,
-		lnFami, pcNome, pcMail, pcHash)
+		`INSERT INTO usuarios (familia_id, nome, email, senha_hash, google_sub) VALUES (?, ?, ?, ?, ?)`,
+		lnFami, pcNome, pcMail, pcHash, loGoog)
 	var loErMy *mysql.MySQLError
 	if errors.As(err, &loErMy) && loErMy.Number == codigoDuplicadoSQL {
 		return Usuario{}, ErrEmailEmUso
@@ -105,6 +90,57 @@ func (m *MySQL) Cadastrar(ctx context.Context, pcNome, pcMail, pcHash, pcConv st
 		return Usuario{}, err
 	}
 	return m.usuarioPorID(ctx, lnUsua)
+}
+
+// escolherFamilia aplica a regra do cadastro: convite > dono assume a familia 1 > familia nova
+func escolherFamilia(ctx context.Context, poTx *sql.Tx, pcNome, pcConv string, llDono bool) (int64, error) {
+	var lnFami int64
+	if strings.TrimSpace(pcConv) != "" {
+		err := poTx.QueryRowContext(ctx, `SELECT id FROM familias WHERE codigo_convite = ?`,
+			strings.ToUpper(strings.TrimSpace(pcConv))).Scan(&lnFami)
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrConviteInvalido
+		}
+		return lnFami, err
+	}
+
+	// trava a familia 1 ANTES de contar: dois cadastros simultaneos nao caem os dois nela
+	var lnExis int64
+	errF := poTx.QueryRowContext(ctx, `SELECT id FROM familias WHERE id = 1 FOR UPDATE`).Scan(&lnExis)
+	var lnUsua int
+	if err := poTx.QueryRowContext(ctx, `SELECT COUNT(*) FROM usuarios`).Scan(&lnUsua); err != nil {
+		return 0, err
+	}
+	if lnUsua == 0 && errF == nil && llDono {
+		return 1, nil
+	}
+	return criarFamilia(ctx, poTx, "Família de "+primeiroNome(pcNome))
+}
+
+// EntrarComGoogle acha ou cria o usuario de uma conta Google com e-mail verificado.
+// Ordem: mesma conta Google ja ligada > mesmo e-mail (liga a conta; o Google garantiu que a
+// pessoa e dona do e-mail) > usuario novo, com a mesma regra de familia do cadastro.
+func (m *MySQL) EntrarComGoogle(ctx context.Context, pcGoog, pcMail, pcNome, pcConv string, llDono bool) (Usuario, error) {
+	var lnID int64
+	err := m.db.QueryRowContext(ctx, `SELECT id FROM usuarios WHERE google_sub = ?`, pcGoog).Scan(&lnID)
+	if err == nil {
+		return m.usuarioPorID(ctx, lnID)
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return Usuario{}, err
+	}
+
+	err = m.db.QueryRowContext(ctx, `SELECT id FROM usuarios WHERE email = ?`, pcMail).Scan(&lnID)
+	if err == nil {
+		if _, err := m.db.ExecContext(ctx, `UPDATE usuarios SET google_sub = ? WHERE id = ?`, pcGoog, lnID); err != nil {
+			return Usuario{}, err
+		}
+		return m.usuarioPorID(ctx, lnID)
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return Usuario{}, err
+	}
+	return m.criarUsuario(ctx, pcNome, pcMail, "", pcGoog, pcConv, llDono)
 }
 
 func primeiroNome(pcNome string) string {
@@ -183,6 +219,8 @@ func (m *MySQL) Sessao(ctx context.Context, pcHash string) (Usuario, error) {
 	if err != nil {
 		return Usuario{}, err
 	}
+	m.db.ExecContext(ctx, `UPDATE usuarios SET ultimo_acesso = ? WHERE id = ?
+		AND (ultimo_acesso IS NULL OR ultimo_acesso < ?)`, time.Now(), lnUsua, time.Now().Add(-time.Hour))
 	return m.usuarioPorID(ctx, lnUsua)
 }
 

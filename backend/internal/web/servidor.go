@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/oauth2"
+
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/armazenamento"
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/assistente"
 )
@@ -30,6 +32,8 @@ type Servidor struct {
 	limChat   *limitador                         // perguntas ao assistente por usuario (cota da IA e de todos)
 	producao  bool                               // HTTPS garantido pela hospedagem: cookie Secure e HSTS sempre
 	donoMail  string                             // unico e-mail que pode assumir a familia 1
+	google    *oauth2.Config                     // nil = "Entrar com Google" desligado
+	userinfo  string                             // endpoint do perfil Google (trocado no teste)
 }
 
 func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
@@ -71,12 +75,16 @@ func (s *Servidor) Rotas() http.Handler {
 	loMux.HandleFunc("POST /api/auth/login", s.entrar)
 	loMux.HandleFunc("POST /api/auth/sair", s.sair)
 	loMux.HandleFunc("GET /api/convite/{codigo}", s.convite)
+	loMux.HandleFunc("GET /api/auth/config", s.configAuth)
+	loMux.HandleFunc("GET /api/auth/google", s.irParaGoogle)
+	loMux.HandleFunc("GET /api/auth/google/retorno", s.retornoGoogle)
 
 	// so com login: cada handler enxerga apenas a familia de quem esta logado
 	loPriv := http.NewServeMux()
 	loPriv.HandleFunc("GET /api/auth/eu", s.eu)
 	loPriv.HandleFunc("GET /api/familia", s.familia)
 	loPriv.HandleFunc("POST /api/familia/convite", s.novoConvite)
+	loPriv.HandleFunc("GET /api/admin/painel", s.exigirAdmin(s.painelAdmin))
 
 	loPriv.HandleFunc("GET /api/categorias", s.listarCategorias)
 	loPriv.HandleFunc("PUT /api/categorias/{id}/orcamento", s.salvarOrcamento)
@@ -98,7 +106,7 @@ func (s *Servidor) Rotas() http.Handler {
 	loPriv.HandleFunc("GET /api/importacoes", s.listarImportacoes)
 
 	loProt := s.exigirLogin(loPriv)
-	for _, lcRota := range []string{"/api/auth/eu", "/api/familia", "/api/familia/", "/api/categorias", "/api/categorias/",
+	for _, lcRota := range []string{"/api/auth/eu", "/api/admin/", "/api/familia", "/api/familia/", "/api/categorias", "/api/categorias/",
 		"/api/regras", "/api/transacoes", "/api/transacoes/", "/api/resumo", "/api/evolucao",
 		"/api/estatisticas", "/api/chat", "/api/importar", "/api/importacoes"} {
 		loMux.Handle(lcRota, loProt)
@@ -148,15 +156,16 @@ func barrarOutroSite(poProx http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead && strings.HasPrefix(r.URL.Path, "/api/") &&
 			!strings.HasPrefix(r.URL.Path, "/api/integracao/") {
-			// navegador moderno diz de onde veio; "none" e o usuario digitando/abrindo direto
-			switch r.Header.Get("Sec-Fetch-Site") {
-			case "", "same-origin", "none":
-			default:
+			// navegador moderno diz de onde veio, e pagina nenhuma consegue forjar este cabecalho;
+			// quando ele vem, vale sozinho ("none" e o usuario digitando/abrindo direto)
+			lcSite := r.Header.Get("Sec-Fetch-Site")
+			if lcSite != "" && lcSite != "same-origin" && lcSite != "none" {
 				erroJSON(w, http.StatusForbidden, "requisição de outro site recusada")
 				return
 			}
-			// navegador antigo sem Sec-Fetch-Site: compara a Origin com o proprio host
-			if lcOrig := r.Header.Get("Origin"); lcOrig != "" {
+			// navegador antigo sem Sec-Fetch-Site: compara a Origin com o proprio host. So nele: atras
+			// de proxy (Vite em dev) a Origin e o Host legitimamente diferem.
+			if lcOrig := r.Header.Get("Origin"); lcSite == "" && lcOrig != "" {
 				if loURL, err := url.Parse(lcOrig); err != nil || loURL.Host != r.Host {
 					erroJSON(w, http.StatusForbidden, "requisição de outro site recusada")
 					return

@@ -245,7 +245,14 @@ export type Estatisticas = {
 export const buscarEstatisticas = (mes: string, sinal?: AbortSignal) =>
   pedir<Estatisticas>(`/api/estatisticas?mes=${mes}`, { signal: sinal })
 
-export type Usuario = { id: number; nome: string; email: string; familia: string; convite?: string }
+export type Usuario = {
+  id: number
+  nome: string
+  email: string
+  familia: string
+  convite?: string
+  admin?: boolean
+}
 
 export type Familia = {
   nome: string
@@ -275,3 +282,38 @@ export const consultarConvite = (codigo: string, sinal?: AbortSignal) =>
   pedir<{ familia: string }>(`/api/convite/${encodeURIComponent(codigo)}`, { signal: sinal })
 
 export const gerarNovoConvite = () => postarJSON<{ convite: string }>('/api/familia/convite', {})
+
+export const buscarConfigAuth = (sinal?: AbortSignal) =>
+  pedir<{ google: boolean }>('/api/auth/config', { signal: sinal })
+
+export type PontoDia = { dia: string; valor: number }
+
+export type PainelAdmin = {
+  usuarios: number
+  familias: number
+  com_google: number
+  novos_7: number
+  novos_30: number
+  ativos_7: number
+  transacoes: number
+  importacoes_30: number
+  perguntas_hoje: number
+  tokens_hoje: number
+  perguntas_30: number
+  tokens_30: number
+  cadastros_por_dia: PontoDia[]
+  perguntas_por_dia: PontoDia[]
+  chat_ligado: boolean
+  google_ligado: boolean
+  lista: {
+    nome: string
+    email: string
+    familia: string
+    criado_em: string
+    ultimo_acesso: string
+    google: boolean
+    perguntas_30: number
+  }[]
+}
+
+export const buscarPainelAdmin = (sinal?: AbortSignal) => pedir<PainelAdmin>('/api/admin/painel', { signal: sinal })
