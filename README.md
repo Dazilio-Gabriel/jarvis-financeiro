@@ -26,7 +26,7 @@ Inteligência Artificial** (Prof. M.Sc. Howard Cruz Roatti, [@howardroatti](http
 | Entrega | Prazo | Onde está |
 |---|---|---|
 | **C1 — Relatório** (escopo, justificativa, metodologia, plano de trabalho, comunidade e indicadores) | 18/09/2026 | [docs/entregas/C1-relatorio.md](docs/entregas/C1-relatorio.md) |
-| **C2 — Protótipo em vídeo** (chat com tool calling, testes + CI, eval v1) | 30/10/2026 | [docs/entregas/C2-prototipo.md](docs/entregas/C2-prototipo.md) · vídeo: _(link)_ |
+| **C2 — Protótipo em vídeo** (chat com tool calling, testes + CI, eval v1) | 30/10/2026 | [docs/entregas/C2-prototipo.md](docs/entregas/C2-prototipo.md) · vídeo: [youtu.be/24vgx5CACnY](https://youtu.be/24vgx5CACnY) |
 | C3 — MVP (vídeo, código, testes + eval, deploy com URL pública, análise de impacto) | 04/12/2026 | _planejado_ |
 
 O componente de IA (chat sobre os dados via LLM com **tool calling**) usa a **GroqCloud** como

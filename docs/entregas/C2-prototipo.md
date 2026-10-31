@@ -5,7 +5,7 @@
 | **Disciplina** | Projeto Integrador IV — Aplicações de Inteligência Artificial (FAESA, 2026/2) |
 | **Professor** | M.Sc. Howard Cruz Roatti ([@howardroatti](https://github.com/howardroatti)) |
 | **Prazo** | 30/10/2026 |
-| **Vídeo** | _(colar o link do YouTube aqui depois de publicar)_ |
+| **Vídeo** | [https://youtu.be/24vgx5CACnY](https://youtu.be/24vgx5CACnY) |
 | **Repositório** | https://github.com/Dazilio-Gabriel/jarvis-financeiro |
 
 O objetivo da C2 é demonstrar a **viabilidade técnica** da solução: o componente de IA
@@ -159,7 +159,7 @@ bloco pode ser narrado por um integrante diferente.
 
 ```
 Entrega 2 — Vídeo do protótipo — Jarvis Financeiro
-Vídeo: <link do YouTube>
+Vídeo: https://youtu.be/24vgx5CACnY
 Repositório: https://github.com/Dazilio-Gabriel/jarvis-financeiro
 Documento da entrega: https://github.com/Dazilio-Gabriel/jarvis-financeiro/blob/main/docs/entregas/C2-prototipo.md
 Integrantes: <nomes>
