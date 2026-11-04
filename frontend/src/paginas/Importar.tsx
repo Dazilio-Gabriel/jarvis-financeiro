@@ -15,6 +15,7 @@ export default function Importar() {
   const [resultado, setResultado] = useState<ResultadoImport | null>(null)
   const [erro, setErro] = useState('')
   const [arrastando, setArrastando] = useState(false)
+  const [guia, setGuia] = useState<string>(BANCOS[0].nome)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [historico, recarregarHistorico] = useBusca((s) => buscarImportacoes(s))
@@ -25,8 +26,9 @@ export default function Importar() {
     setResultado(null)
     setErro('')
     setFase('escolher')
-    if (!conta) setConta(palpiteConta(f.name))
     setMesFatura(mesDoArquivo(f.name))
+    const banco = bancoDoNome(f.name)
+    if (banco) setGuia(banco)
   }
 
   async function enviar(prever: boolean) {
@@ -37,6 +39,9 @@ export default function Importar() {
     try {
       const res = await importarCSV(arquivo, { conta, pessoa, tipo, prever, mesFatura })
       setResultado(res)
+      // conta em branco: mostra a que o Jarvis tirou do banco reconhecido, para a pessoa conferir
+      if (!conta && res.conta) setConta(res.conta)
+      if (res.banco && BANCOS.some((b) => b.nome === res.banco)) setGuia(res.banco)
       setFase(prever ? 'previa' : 'pronto')
       if (!prever) recarregarHistorico()
     } catch (e: unknown) {
@@ -56,13 +61,13 @@ export default function Importar() {
   return (
     <>
       <Cabecalho
-        rotulo="IMPORTAÇÃO · CSV"
+        rotulo="IMPORTAÇÃO · CSV · OFX · XLSX"
         titulo={
           <>
             traga o extrato <em>do banco</em>
           </>
         }
-        sub="exporte no app do Nubank e solte o arquivo aqui — reimportar o mesmo arquivo não duplica nada"
+        sub="exporte o extrato ou a fatura no app do banco e solte aqui — o Jarvis reconhece o banco sozinho, e reimportar não duplica nada"
       />
 
       <div className="grade-import">
@@ -84,7 +89,7 @@ export default function Importar() {
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.ofx,.xlsx,.txt,text/csv,application/x-ofx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               hidden
               onChange={(e) => escolher(e.target.files?.[0] ?? null)}
             />
@@ -98,8 +103,8 @@ export default function Importar() {
             ) : (
               <>
                 <span className="solta-icone">↧</span>
-                <strong>solte o CSV aqui</strong>
-                <span className="dica">ou clique para escolher</span>
+                <strong>solte o arquivo aqui</strong>
+                <span className="dica">CSV, OFX ou XLSX · ou clique para escolher</span>
               </>
             )}
           </div>
@@ -110,7 +115,7 @@ export default function Importar() {
               <input
                 value={conta}
                 onChange={(e) => setConta(e.target.value)}
-                placeholder="Nubank Cartão"
+                placeholder="pelo banco"
               />
             </label>
 
@@ -139,7 +144,7 @@ export default function Importar() {
                 type="month"
                 value={mesFatura}
                 onChange={(e) => setMesFatura(e.target.value)}
-                title="Só vale para fatura de cartão. Vem do nome do arquivo do Nubank; confira."
+                title="Só vale para fatura de cartão. No Nubank vem do nome do arquivo; nos outros bancos, escolha."
               />
             </label>
           </div>
@@ -169,24 +174,8 @@ export default function Importar() {
           </div>
         </Cartao>
 
-        <Cartao titulo="COMO EXPORTAR NO NUBANK" indice={1}>
-          <ol className="passos">
-            <li>
-              <strong>Fatura do cartão</strong>
-              <span>app → Cartão de crédito → escolha a fatura → Exportar → CSV</span>
-            </li>
-            <li>
-              <strong>Extrato da conta</strong>
-              <span>app → Conta → Histórico → filtro de período → Exportar → CSV</span>
-            </li>
-            <li>
-              <strong>Pode repetir sem medo</strong>
-              <span>
-                cada lançamento vira um hash único de data + descrição + valor; o banco
-                recusa repetido sozinho
-              </span>
-            </li>
-          </ol>
+        <Cartao titulo="COMO EXPORTAR" indice={1}>
+          <GuiaBancos banco={guia} aoEscolher={setGuia} />
         </Cartao>
       </div>
 
@@ -258,7 +247,10 @@ function Resultado({
       }
       rodape={
         <>
+          {res.layout && <Pill tom="ok">{res.layout.toUpperCase()}</Pill>}
+          <Pill>{res.formato.toUpperCase()}</Pill>
           <Pill>TIPO: {res.tipo.toUpperCase()}</Pill>
+          {res.conta && <Pill>CONTA: {res.conta.toUpperCase()}</Pill>}
           {res.tipo === 'cartao' && res.mes_fatura && <Pill tom="ok">FATURA: {rotuloMes(`${res.mes_fatura}-01`).toUpperCase()}</Pill>}
           <Pill>{res.total_linhas} LINHAS</Pill>
           {res.categorizadas > 0 && (
@@ -330,10 +322,102 @@ function Placar({ rotulo, valor, tom }: { rotulo: string; valor: number; tom: st
   )
 }
 
-/** Palpite de conta pelo nome do arquivo, so para poupar digitacao. */
-function palpiteConta(nome: string) {
+/** Passos de exportacao por banco. Os menus mudam com as versoes do app: o texto aponta o caminho, nao promete o botao. */
+const BANCOS: { nome: string; passos: [string, string][] }[] = [
+  {
+    nome: 'Nubank',
+    passos: [
+      ['Fatura do cartão', 'app → Cartão de crédito → escolha a fatura → Exportar fatura → CSV (chega por e-mail)'],
+      ['Extrato da conta', 'app → Conta → Histórico → filtro de período → Exportar → CSV ou OFX'],
+    ],
+  },
+  {
+    nome: 'Inter',
+    passos: [
+      ['Extrato da conta', 'app Inter → Extrato → ícone de exportar → escolha o período → CSV ou OFX'],
+      ['Fatura do cartão', 'app → Cartões → Fatura → exportar/baixar → CSV'],
+    ],
+  },
+  {
+    nome: 'XP',
+    passos: [
+      ['Fatura do cartão', 'app XP → Cartão → Fatura → Exportar → CSV (traz o portador: cada compra já sai com a pessoa)'],
+      ['Extrato da conta', 'XP (app ou site) → Conta → Extrato → período → exportar em Excel; pode soltar o .xlsx direto'],
+    ],
+  },
+  {
+    nome: 'Itaú',
+    passos: [
+      ['Extrato da conta', 'internet banking → Conta corrente → Extrato → período → Salvar em OFX (o TXT/CSV sem cabeçalho também funciona)'],
+    ],
+  },
+  {
+    nome: 'Bradesco',
+    passos: [['Extrato da conta', 'internet banking → Saldos e extratos → Extrato → Salvar como OFX ou planilha CSV']],
+  },
+  {
+    nome: 'Banco do Brasil',
+    passos: [['Extrato da conta', 'app ou site → Extrato → período → baixar em OFX ou CSV']],
+  },
+  {
+    nome: 'Santander',
+    passos: [['Extrato da conta', 'internet banking → Conta corrente → Extrato → exportar em OFX, CSV ou Excel (.xlsx)']],
+  },
+  {
+    nome: 'C6',
+    passos: [
+      ['Extrato da conta', 'app → Extrato → exportar → CSV ou OFX'],
+      ['Fatura do cartão', 'app → Cartão → Fatura → exportar → CSV'],
+    ],
+  },
+  {
+    nome: 'Outros',
+    passos: [
+      ['Caixa, Banestes, Sicoob, Sicredi, Mercado Pago…', 'procure "exportar extrato" ou "salvar como" e escolha OFX (o antigo "Money"): é o padrão de todo banco brasileiro'],
+      ['Planilha de qualquer banco', 'CSV ou XLSX com uma coluna de data, uma de descrição e uma de valor (ou crédito e débito separados)'],
+    ],
+  },
+]
+
+function GuiaBancos({ banco, aoEscolher }: { banco: string; aoEscolher: (b: string) => void }) {
+  const atual = BANCOS.find((b) => b.nome === banco) ?? BANCOS[0]
+  return (
+    <>
+      <div className="bancos" role="group" aria-label="banco">
+        {BANCOS.map((b) => (
+          <button key={b.nome} className={`botao pequeno ${b.nome === atual.nome ? 'ativo' : ''}`}
+            aria-pressed={b.nome === atual.nome} onClick={() => aoEscolher(b.nome)}>
+            {b.nome}
+          </button>
+        ))}
+      </div>
+      <ol className="passos">
+        {atual.passos.map(([titulo, texto]) => (
+          <li key={titulo}>
+            <strong>{titulo}</strong>
+            <span>{texto}</span>
+          </li>
+        ))}
+        <li>
+          <strong>Pode repetir sem medo</strong>
+          <span>
+            cada lançamento vira um hash único de data + descrição + valor; o banco recusa repetido sozinho
+          </span>
+        </li>
+      </ol>
+    </>
+  )
+}
+
+/** Banco pelo nome do arquivo, so para abrir o guia certo; quem reconhece o layout e o backend. */
+function bancoDoNome(nome: string) {
   const n = nome.toLowerCase()
-  if (n.includes('fatura') || n.includes('cartao') || n.includes('card')) return 'Nubank Cartão'
-  if (n.includes('extrato') || n.includes('conta') || n.includes('nu_')) return 'Nubank Conta'
+  if (n.startsWith('nubank') || n.startsWith('nu_')) return 'Nubank'
+  if (n.includes('inter')) return 'Inter'
+  if (/(^|[^a-z])xp([^a-z]|$)/.test(n)) return 'XP'
+  if (n.includes('itau') || n.includes('itaú')) return 'Itaú'
+  if (n.includes('bradesco')) return 'Bradesco'
+  if (n.includes('santander')) return 'Santander'
+  if (n.includes('c6')) return 'C6'
   return ''
 }

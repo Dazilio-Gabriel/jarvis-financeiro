@@ -1375,6 +1375,7 @@ code {
   justify-content: space-around;
   gap: 0.5rem;
   min-height: 240px;
+  overflow-x: auto; /* 12 meses nao cabem num celular: rola dentro do cartao, nao a pagina */
 }
 
 .emp-col {
@@ -1383,6 +1384,7 @@ code {
   align-items: center;
   gap: 0.35rem;
   flex: 1;
+  min-width: 2.6rem;
   max-width: 90px;
 }
 
@@ -1720,11 +1722,63 @@ code {
 
 .linha-ativo {
   display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--borda);
+}
+
+.ativo-linha {
+  display: flex;
   align-items: center;
   gap: 0.8rem;
-  padding: 0.6rem 0;
-  border-top: 1px solid var(--borda);
   flex-wrap: wrap;
+}
+
+.ativo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.botao.ativo {
+  border-color: var(--verde-borda);
+  background: var(--sup-verde);
+  color: var(--verde);
+}
+
+.ativo-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-left: 1.3rem;
+  font-size: 0.74rem;
+  color: var(--txt-fraco);
+}
+
+.ativo-meta .barra {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.ativo-meta strong {
+  color: var(--txt);
+}
+
+.ativo-painel {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0 0 0 1.3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px dashed var(--borda);
+  border-radius: 8px;
+  background: var(--fundo);
+}
+
+.ativo-painel.campos {
+  align-items: flex-end;
 }
 
 .ativo-nome {
@@ -1966,6 +2020,195 @@ code {
   }
 }
 
+/* ================================================================ CAMBIO */
+
+.cambio {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.cambio .fraco {
+  color: var(--txt-fraco);
+}
+
+.cambio-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cambio-valor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cambio-valor > .fraco {
+  font-size: 0.85rem;
+}
+
+.cambio-valor strong {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cambio-valor strong em {
+  font-style: normal;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--txt-fraco);
+}
+
+.cambio-var {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cambio-quando {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.cambio-periodos {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+.cambio-grafico {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  touch-action: pan-y; /* arrastar o dedo no grafico mostra o valor sem travar a rolagem */
+  transition: opacity 0.2s ease;
+}
+
+.cambio-grafico.carregando {
+  opacity: 0.45;
+}
+
+.cambio-grafico.vazio {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--sup) 0%, var(--barra-fundo) 50%, var(--sup) 100%);
+  background-size: 200% 100%;
+  animation: brilho 1.4s linear infinite;
+}
+
+@keyframes brilho {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.cambio-grafico svg {
+  display: block;
+  overflow: visible;
+}
+
+.cambio-grade {
+  stroke: var(--borda);
+  stroke-width: 1;
+}
+
+.cambio-base {
+  stroke: var(--txt-fraco);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.7;
+}
+
+.cambio-mira {
+  stroke: var(--txt-fraco);
+  stroke-width: 1;
+}
+
+.cambio-eixo {
+  fill: var(--txt-fraco);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.cambio-dica {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  background: var(--sup);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cambio-dica strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cambio-dica span {
+  color: var(--txt-fraco);
+  font-size: 0.68rem;
+}
+
+.cambio-faixa {
+  margin-top: -0.4rem;
+}
+
+.cambio-conversor {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cambio-conversor .campo-orca input {
+  width: 120px;
+  font-size: 0.95rem;
+}
+
+.cambio-saldo,
+.cambio-fonte {
+  margin: 0;
+}
+
+.cambio-fonte {
+  font-size: 0.66rem;
+}
+
+.cambio-erro {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 120px;
+}
+
+/* ================================================================ BANCOS */
+
+.bancos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+
+.bancos .botao.ativo {
+  font-weight: 600;
+}
+
 /* ================================================================ RESPONSIVO */
 
 @media (max-width: 900px) {
@@ -1975,6 +2218,15 @@ code {
 }
 
 @media (max-width: 760px) {
+  .cambio-valor strong {
+    font-size: 1.7rem;
+  }
+
+  .ativo-meta,
+  .ativo-painel {
+    margin-left: 0;
+  }
+
   .layout {
     grid-template-columns: 1fr;
   }

@@ -282,3 +282,32 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   não acumular erro de ponto flutuante; patrimônio total, quadro por moeda, rosca, evolução de 12
   meses; quadro de investimentos no Dashboard. Testes: conversão, leitura da cotação, cache e queda
   da API, isolamento entre famílias.
+
+### 2026-11-03 — Layouts de banco, câmbio ao vivo e caixinha com meta e CDI
+- **Quem:** Gabriel Dazilio Fanchiotti · **Ferramenta:** Claude Code (Claude Opus 5.5)
+- **Prompt (literal):**
+  > claude, preciso que vc adicione os pricipais layouts de banco para importar, faz o XP e INter de
+  > bonus pra um amgio tbm, melhore a funcionalidade la do euro e da caixinha, pq seria legal um
+  > grafico com o valor do euro em tempo real e tal, tipo quando vc pesquisa euro no google consegue
+  > fazer isso e subir para mim pf
+- **Resultado:**
+  - **Importação:** o importador virou `Arquivo` (CSV, XLSX via `excelize` e OFX 1.x/2.x) com uma
+    tabela de layouts por banco: Nubank, Inter, XP, C6, Bradesco, Banco do Brasil, Santander,
+    Mercado Pago, Itaú sem cabeçalho e genérico. Preâmbulo, Windows-1252, linhas de saldo/total,
+    crédito e débito separados, histórico em duas linhas, parcela e portador tratados; conta padrão
+    pelo banco reconhecido. Tela com guia de exportação por banco.
+  - **Câmbio ao vivo:** `GET /api/cambio/{moeda}` com a cotação de agora (AwesomeAPI, cache de 1 min
+    compartilhado) e a série do gráfico (intradiário da AwesomeAPI; histórico do Banco Central
+    Europeu via Frankfurter desde 2000, reduzido a 300 pontos). Gráfico estilo Google: períodos
+    1D a máx, verde/vermelho pela direção, fechamento anterior tracejado, valor no hover/toque,
+    conversor nos dois sentidos e ganho/perda do dia nas contas em euro e dólar.
+  - **Caixinha:** migration 007 (`meta_centavos`, `rende_cdi`); guardar/resgatar com `SELECT ... FOR
+    UPDATE` (resgate maior que o saldo é recusado); rendimento estimado pelo CDI da série 4389 do
+    BCB, aplicando o % sobre a taxa diária (21 dias úteis, bruto de IR).
+  - Testes: um caso por banco (inclusive Latin-1, OFX SGML e XML, XLSX gerado no teste), câmbio e
+    CDI com servidores falsos, rota do câmbio, rendimento, integração no MySQL 8.4 com guardar,
+    resgatar e isolamento entre famílias. Tela conferida em screenshot no desktop e em 390 px.
+- **Limite conhecido:** os layouts do Inter e da XP foram montados a partir do formato público
+  desses arquivos, sem um arquivo real em mãos; o primeiro arquivo de verdade confirma (o genérico
+  e o OFX cobrem variações).
+- **Revisão humana:** _(preencher)_

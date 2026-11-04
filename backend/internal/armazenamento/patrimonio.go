@@ -2,6 +2,7 @@ package armazenamento
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -9,11 +10,14 @@ import (
 	"github.com/Dazilio-Gabriel/jarvis-financeiro/internal/financas"
 )
 
-var ErrAtivoNaoEncontrado = errors.New("conta/investimento nao encontrado")
+var (
+	ErrAtivoNaoEncontrado = errors.New("conta/investimento nao encontrado")
+	ErrSaldoInsuficiente  = fmt.Errorf("%w: resgate maior que o saldo", financas.ErrAtivoInvalido)
+)
 
 func (f *Familia) ListarAtivos(ctx context.Context) ([]financas.Ativo, error) {
 	loRows, err := f.db.QueryContext(ctx, `
-		SELECT id, nome, tipo, moeda, saldo_centavos, atualizado_em
+		SELECT id, nome, tipo, moeda, saldo_centavos, meta_centavos, rende_cdi, atualizado_em
 		FROM ativos WHERE familia_id = ? ORDER BY tipo, nome`, f.id)
 	if err != nil {
 		return nil, fmt.Errorf("listar ativos: %w", err)
@@ -25,11 +29,13 @@ func (f *Familia) ListarAtivos(ctx context.Context) ([]financas.Ativo, error) {
 		var (
 			loAtiv financas.Ativo
 			lnSald int64
+			lnMeta int64
 		)
-		if err := loRows.Scan(&loAtiv.ID, &loAtiv.Nome, &loAtiv.Tipo, &loAtiv.Moeda, &lnSald, &loAtiv.AtualizadoEm); err != nil {
+		if err := loRows.Scan(&loAtiv.ID, &loAtiv.Nome, &loAtiv.Tipo, &loAtiv.Moeda, &lnSald, &lnMeta,
+			&loAtiv.RendeCDI, &loAtiv.AtualizadoEm); err != nil {
 			return nil, err
 		}
-		loAtiv.Saldo = financas.Centavos(lnSald)
+		loAtiv.Saldo, loAtiv.Meta = financas.Centavos(lnSald), financas.Centavos(lnMeta)
 		laAtiv = append(laAtiv, loAtiv)
 	}
 	return laAtiv, loRows.Err()
@@ -48,8 +54,9 @@ func (f *Familia) CriarAtivo(ctx context.Context, poAtiv financas.Ativo) (int64,
 
 	ldAgor := time.Now()
 	loRes, err := loTx.ExecContext(ctx, `
-		INSERT INTO ativos (familia_id, nome, tipo, moeda, saldo_centavos, atualizado_em)
-		VALUES (?, ?, ?, ?, ?, ?)`, f.id, poAtiv.Nome, poAtiv.Tipo, poAtiv.Moeda, int64(poAtiv.Saldo), ldAgor)
+		INSERT INTO ativos (familia_id, nome, tipo, moeda, saldo_centavos, meta_centavos, rende_cdi, atualizado_em)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, f.id, poAtiv.Nome, poAtiv.Tipo, poAtiv.Moeda, int64(poAtiv.Saldo),
+		int64(poAtiv.Meta), poAtiv.RendeCDI, ldAgor)
 	if err != nil {
 		return 0, fmt.Errorf("criar ativo: %w", err)
 	}
@@ -94,6 +101,75 @@ func (f *Familia) AtualizarSaldo(ctx context.Context, pnAtiv int64, pnSald finan
 		return err
 	}
 	return loTx.Commit()
+}
+
+// ConfigurarAtivo muda nome, meta e rendimento; o saldo so muda por AtualizarSaldo/Movimentar
+func (f *Familia) ConfigurarAtivo(ctx context.Context, poAtiv financas.Ativo) error {
+	if err := poAtiv.ValidarConfig(); err != nil {
+		return err
+	}
+	loRes, err := f.db.ExecContext(ctx,
+		`UPDATE ativos SET nome = ?, meta_centavos = ?, rende_cdi = ? WHERE id = ? AND familia_id = ?`,
+		poAtiv.Nome, int64(poAtiv.Meta), poAtiv.RendeCDI, poAtiv.ID, f.id)
+	if err != nil {
+		return fmt.Errorf("configurar ativo: %w", err)
+	}
+	if lnAfet, _ := loRes.RowsAffected(); lnAfet == 0 {
+		// nada mudou nao conta como linha afetada no MySQL: confere se o ativo existe mesmo
+		return f.existeAtivo(ctx, poAtiv.ID)
+	}
+	return nil
+}
+
+// Movimentar guarda (valor positivo) ou resgata (negativo) e devolve o saldo novo.
+// FOR UPDATE: dois cliques seguidos em "resgatar" nao leem o mesmo saldo e deixam negativo.
+func (f *Familia) Movimentar(ctx context.Context, pnAtiv int64, pnValo financas.Centavos) (financas.Centavos, error) {
+	if pnValo == 0 {
+		return 0, fmt.Errorf("%w: valor zero", financas.ErrAtivoInvalido)
+	}
+	loTx, err := f.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer loTx.Rollback()
+
+	var lnSald int64
+	err = loTx.QueryRowContext(ctx, `SELECT saldo_centavos FROM ativos WHERE id = ? AND familia_id = ? FOR UPDATE`,
+		pnAtiv, f.id).Scan(&lnSald)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrAtivoNaoEncontrado
+	}
+	if err != nil {
+		return 0, fmt.Errorf("movimentar: %w", err)
+	}
+	lnNovo := financas.Centavos(lnSald) + pnValo
+	if lnNovo < 0 {
+		return 0, ErrSaldoInsuficiente
+	}
+	if lnNovo > 1_000_000_000_00 {
+		return 0, fmt.Errorf("%w: saldo fora do intervalo", financas.ErrAtivoInvalido)
+	}
+
+	ldAgor := time.Now()
+	if _, err := loTx.ExecContext(ctx, `UPDATE ativos SET saldo_centavos = ?, atualizado_em = ? WHERE id = ?`,
+		int64(lnNovo), ldAgor, pnAtiv); err != nil {
+		return 0, err
+	}
+	if _, err := loTx.ExecContext(ctx,
+		`INSERT INTO ativos_historico (ativo_id, saldo_centavos, registrado_em) VALUES (?, ?, ?)`,
+		pnAtiv, int64(lnNovo), ldAgor); err != nil {
+		return 0, err
+	}
+	return lnNovo, loTx.Commit()
+}
+
+func (f *Familia) existeAtivo(ctx context.Context, pnAtiv int64) error {
+	var lnAcha int
+	if err := f.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ativos WHERE id = ? AND familia_id = ?`,
+		pnAtiv, f.id).Scan(&lnAcha); err != nil || lnAcha == 0 {
+		return ErrAtivoNaoEncontrado
+	}
+	return nil
 }
 
 func (f *Familia) ApagarAtivo(ctx context.Context, pnAtiv int64) error {

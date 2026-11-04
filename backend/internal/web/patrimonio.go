@@ -23,7 +23,10 @@ type ativoDTO struct {
 	Tipo          string `json:"tipo"`
 	Moeda         string `json:"moeda"`
 	SaldoCentavos int64  `json:"saldo_centavos"`
-	ReaisCentavos *int64 `json:"reais_centavos"` // nil quando falta a cotacao da moeda
+	ReaisCentavos *int64 `json:"reais_centavos"`     // nil quando falta a cotacao da moeda
+	MetaCentavos  int64  `json:"meta_centavos"`      // 0 = sem meta
+	RendeCDI      int    `json:"rende_cdi"`          // % do CDI; 0 = nao rende
+	RendeMes      *int64 `json:"rende_mes_centavos"` // estimativa do mes; nil sem CDI ou sem rendimento
 	AtualizadoEm  string `json:"atualizado_em"`
 }
 
@@ -53,15 +56,26 @@ func (s *Servidor) patrimonio(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("patrimonio: %v", err) // sem cotacao a tela ainda mostra os saldos na moeda
 	}
+	lnCDI, ldCDI, err := s.cdi.CDI(ctx)
+	if err != nil {
+		log.Printf("patrimonio: %v", err) // sem CDI a caixinha so nao mostra quanto rende
+	}
 
-	var lnTota int64
+	var lnTota, lnRend int64
 	llComp := true // total completo (toda moeda estrangeira tinha cotacao)
 	loPorM := map[string]map[string]int64{}
 	loPorT := map[string]int64{}
 	laDTO := make([]ativoDTO, 0, len(laAtiv))
 	for _, loAtiv := range laAtiv {
 		loDTO := ativoDTO{ID: loAtiv.ID, Nome: loAtiv.Nome, Tipo: loAtiv.Tipo, Moeda: loAtiv.Moeda,
-			SaldoCentavos: int64(loAtiv.Saldo), AtualizadoEm: loAtiv.AtualizadoEm.Format("2006-01-02T15:04")}
+			SaldoCentavos: int64(loAtiv.Saldo), MetaCentavos: int64(loAtiv.Meta), RendeCDI: loAtiv.RendeCDI,
+			AtualizadoEm: loAtiv.AtualizadoEm.Format("2006-01-02T15:04")}
+		// CDI e taxa de real: conta em euro ou dolar que "rende" nao tem como estimar por ele
+		if lnCDI > 0 && loAtiv.RendeCDI > 0 && loAtiv.Moeda == "BRL" {
+			lnMes := int64(financas.RendimentoMes(loAtiv.Saldo, lnCDI, loAtiv.RendeCDI))
+			loDTO.RendeMes = &lnMes
+			lnRend += lnMes
+		}
 		if loPorM[loAtiv.Moeda] == nil {
 			loPorM[loAtiv.Moeda] = map[string]int64{"saldo_centavos": 0, "reais_centavos": 0}
 		}
@@ -93,16 +107,22 @@ func (s *Servidor) patrimonio(w http.ResponseWriter, r *http.Request) {
 	if !ldCota.IsZero() {
 		lcCoEm = ldCota.Format("2006-01-02T15:04")
 	}
+	var loCDI map[string]any
+	if lnCDI > 0 {
+		loCDI = map[string]any{"taxa": lnCDI, "dia": ldCDI.Format("2006-01-02")} // taxa: % a.a. x100
+	}
 
 	responderJSON(w, http.StatusOK, map[string]any{
-		"ativos":         laDTO,
-		"total_centavos": lnTota,
-		"total_completo": llComp,
-		"por_moeda":      loPorM,
-		"por_tipo":       loPorT,
-		"cotacoes":       loCotDTO, // reais por unidade, x10000 (5,4321 -> 54321)
-		"cotacao_em":     lcCoEm,
-		"evolucao":       laEvol,
+		"ativos":             laDTO,
+		"total_centavos":     lnTota,
+		"total_completo":     llComp,
+		"por_moeda":          loPorM,
+		"por_tipo":           loPorT,
+		"cotacoes":           loCotDTO, // reais por unidade, x10000 (5,4321 -> 54321)
+		"cotacao_em":         lcCoEm,
+		"cdi":                loCDI, // null quando o BCB nao respondeu
+		"rende_mes_centavos": lnRend,
+		"evolucao":           laEvol,
 	})
 }
 
@@ -153,6 +173,8 @@ type pedidoAtivo struct {
 	Tipo          string `json:"tipo"`
 	Moeda         string `json:"moeda"`
 	SaldoCentavos int64  `json:"saldo_centavos"`
+	MetaCentavos  int64  `json:"meta_centavos"`
+	RendeCDI      int    `json:"rende_cdi"`
 }
 
 func (s *Servidor) criarAtivo(w http.ResponseWriter, r *http.Request) {
@@ -162,10 +184,12 @@ func (s *Servidor) criarAtivo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	loAtiv := financas.Ativo{
-		Nome:  strings.TrimSpace(loPedi.Nome),
-		Tipo:  loPedi.Tipo,
-		Moeda: strings.ToUpper(loPedi.Moeda),
-		Saldo: financas.Centavos(loPedi.SaldoCentavos),
+		Nome:     strings.TrimSpace(loPedi.Nome),
+		Tipo:     loPedi.Tipo,
+		Moeda:    strings.ToUpper(loPedi.Moeda),
+		Saldo:    financas.Centavos(loPedi.SaldoCentavos),
+		Meta:     financas.Centavos(loPedi.MetaCentavos),
+		RendeCDI: loPedi.RendeCDI,
 	}
 	lnID, err := s.dados(r).CriarAtivo(r.Context(), loAtiv)
 	if errors.Is(err, financas.ErrAtivoInvalido) {
@@ -201,6 +225,44 @@ func (s *Servidor) atualizarSaldoAtivo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err := s.dados(r).AtualizarSaldo(r.Context(), lnID, financas.Centavos(loCorp.SaldoCentavos))
+	responderAtivo(w, err, map[string]bool{"ok": true})
+}
+
+// configurarAtivo: PUT /api/ativos/{id} com nome, meta e % do CDI
+func (s *Servidor) configurarAtivo(w http.ResponseWriter, r *http.Request) {
+	lnID, llOk := idDaRota(w, r)
+	if !llOk {
+		return
+	}
+	var loPedi pedidoAtivo
+	if err := json.NewDecoder(r.Body).Decode(&loPedi); err != nil {
+		erroJSON(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+	err := s.dados(r).ConfigurarAtivo(r.Context(), financas.Ativo{ID: lnID, Nome: strings.TrimSpace(loPedi.Nome),
+		Meta: financas.Centavos(loPedi.MetaCentavos), RendeCDI: loPedi.RendeCDI})
+	responderAtivo(w, err, map[string]bool{"ok": true})
+}
+
+// movimentarAtivo: POST /api/ativos/{id}/movimento; valor positivo guarda, negativo resgata
+func (s *Servidor) movimentarAtivo(w http.ResponseWriter, r *http.Request) {
+	lnID, llOk := idDaRota(w, r)
+	if !llOk {
+		return
+	}
+	var loCorp struct {
+		ValorCentavos int64 `json:"valor_centavos"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&loCorp); err != nil {
+		erroJSON(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+	lnSald, err := s.dados(r).Movimentar(r.Context(), lnID, financas.Centavos(loCorp.ValorCentavos))
+	responderAtivo(w, err, map[string]int64{"saldo_centavos": int64(lnSald)})
+}
+
+// responderAtivo traduz os erros do ativo em status HTTP
+func responderAtivo(w http.ResponseWriter, err error, poOk any) {
 	switch {
 	case errors.Is(err, financas.ErrAtivoInvalido):
 		erroJSON(w, http.StatusBadRequest, err.Error())
@@ -209,7 +271,7 @@ func (s *Servidor) atualizarSaldoAtivo(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		erroInterno(w, err)
 	default:
-		responderJSON(w, http.StatusOK, map[string]bool{"ok": true})
+		responderJSON(w, http.StatusOK, poOk)
 	}
 }
 

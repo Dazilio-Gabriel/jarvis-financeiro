@@ -36,7 +36,7 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loFont := importador.NovoCSV(
+	loFont := importador.NovoArquivo(
 		loCabe.Filename,
 		laDado,
 		r.FormValue("conta"),
@@ -83,6 +83,10 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 		responderJSON(w, http.StatusOK, map[string]any{
 			"previa":        true,
 			"arquivo":       loCabe.Filename,
+			"formato":       string(loFont.Formato),
+			"banco":         loFont.Banco,
+			"layout":        loFont.Layout,
+			"conta":         loFont.Conta(),
 			"tipo":          string(loFont.Detectado),
 			"mes_fatura":    lcMesF,
 			"total_linhas":  loFont.Linhas,
@@ -103,8 +107,8 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 
 	loImpo := financas.Importacao{
 		Arquivo:     loCabe.Filename,
-		Fonte:       "csv",
-		Conta:       r.FormValue("conta"),
+		Fonte:       string(loFont.Formato),
+		Conta:       loFont.Conta(),
 		TotalLinhas: loFont.Linhas,
 		Importadas:  lnInse,
 		Duplicadas:  lnDupl,
@@ -119,6 +123,10 @@ func (s *Servidor) importar(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusOK, map[string]any{
 		"id":            loImpo.ID,
 		"arquivo":       loImpo.Arquivo,
+		"formato":       string(loFont.Formato),
+		"banco":         loFont.Banco,
+		"layout":        loFont.Layout,
+		"conta":         loImpo.Conta,
 		"tipo":          string(loFont.Detectado),
 		"mes_fatura":    lcMesF,
 		"total_linhas":  loFont.Linhas,

@@ -351,7 +351,39 @@ func TestIntegracaoPatrimonio(t *testing.T) {
 	if err := loOutr.ApagarAtivo(ctx, lnDola); !errors.Is(err, ErrAtivoNaoEncontrado) {
 		t.Errorf("outra familia apagou o ativo: %v", err)
 	}
+	if err := loOutr.ConfigurarAtivo(ctx, financas.Ativo{ID: lnCaix, Nome: "roubada"}); !errors.Is(err, ErrAtivoNaoEncontrado) {
+		t.Errorf("outra familia renomeou a caixinha: %v", err)
+	}
+	if _, err := loOutr.Movimentar(ctx, lnCaix, -1); !errors.Is(err, ErrAtivoNaoEncontrado) {
+		t.Errorf("outra familia resgatou da caixinha: %v", err)
+	}
 	if err := loFami.ApagarAtivo(ctx, lnDola); err != nil {
 		t.Fatal(err)
+	}
+
+	// caixinha: meta, % do CDI, guardar e resgatar
+	loConf := financas.Ativo{ID: lnCaix, Nome: "Viagem Europa", Meta: 1000000, RendeCDI: 100}
+	if err := loFami.ConfigurarAtivo(ctx, loConf); err != nil {
+		t.Fatal(err)
+	}
+	if err := loFami.ConfigurarAtivo(ctx, loConf); err != nil { // nada mudou: nao e "nao encontrado"
+		t.Errorf("config igual: %v", err)
+	}
+	if lnSald, err := loFami.Movimentar(ctx, lnCaix, 25000); err != nil || lnSald != 200000 {
+		t.Errorf("guardar R$ 250: saldo %d, %v", lnSald, err)
+	}
+	if _, err := loFami.Movimentar(ctx, lnCaix, -200001); !errors.Is(err, ErrSaldoInsuficiente) {
+		t.Errorf("resgate maior que o saldo: %v", err)
+	}
+	if lnSald, err := loFami.Movimentar(ctx, lnCaix, -50000); err != nil || lnSald != 150000 {
+		t.Errorf("resgatar R$ 500: saldo %d, %v", lnSald, err)
+	}
+	laAtiv, _ = loFami.ListarAtivos(ctx)
+	if len(laAtiv) != 1 || laAtiv[0].Nome != "Viagem Europa" || laAtiv[0].Meta != 1000000 ||
+		laAtiv[0].RendeCDI != 100 || laAtiv[0].Saldo != 150000 {
+		t.Errorf("caixinha depois de configurar e movimentar = %+v", laAtiv)
+	}
+	if laPont, _ = loFami.HistoricoAtivos(ctx, time.Time{}); len(laPont) != 5 { // 3 da caixinha + 2 movimentos
+		t.Errorf("historico com %d pontos, esperado 5", len(laPont))
 	}
 }

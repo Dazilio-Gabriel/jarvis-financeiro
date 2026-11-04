@@ -127,11 +127,11 @@ o binário Go serve o `dist/` e a API na mesma porta (Fase 6), e o proxy deixa d
 |---|---|
 | `/dashboard` | totais do mês, gasto por categoria com orçamento, últimos lançamentos, evolução mensal |
 | `/transacoes` | lista com filtro de período, categoria e busca; troca de categoria inline |
-| `/importar` | envio de CSV com conferência antes de gravar e histórico de importações |
+| `/importar` | envio de CSV, OFX ou XLSX com conferência antes de gravar; reconhece o banco pelo layout (Nubank, Inter, XP, C6, Bradesco, BB, Santander, Mercado Pago, Itaú e qualquer OFX) e mostra como exportar em cada um |
 | `/categorias` | meta mensal por categoria e regras de categorização automática |
 | `/chat` | assistente: perguntas em português sobre os gastos, respondidas via tool calling |
 | `/categorias` → **Categorizar com IA** | a IA classifica cada estabelecimento sem categoria, grava e cria regras para as próximas faturas; o que ela não reconhece vira pergunta para o usuário |
-| `/investimentos` | caixinhas, contas em euro e dólar e investimentos; converte para real pela cotação do dia (AwesomeAPI), patrimônio total, rosca por conta, evolução de 12 meses |
+| `/investimentos` | caixinhas, contas em euro e dólar e investimentos; **câmbio ao vivo** (gráfico do euro/dólar com 1D, 5D, 1M, 6M, 1A, 5A e máx, atualiza a cada minuto, conversor e quanto as contas em moeda estrangeira ganharam ou perderam hoje); caixinha com **meta**, **guardar/resgatar** e **rendimento estimado pelo CDI** do Banco Central; patrimônio total, rosca por conta, evolução de 12 meses |
 | `/estatisticas` | por mês: gasto por categoria (rosca), onde mais gastou ("no BH gastei X"), comparação com o mês anterior, ticket médio, compras parceladas com o que falta pagar, evolução de 6 meses |
 
 ---
@@ -157,9 +157,14 @@ impediria ordenar e somar no cliente.
 | GET | `/api/categorias` | lista com orçamento |
 | PUT | `/api/categorias/{id}/orcamento` | define a meta mensal |
 | GET/POST | `/api/regras` | regras de categorização |
-| POST | `/api/importar` | upload de CSV (multipart) |
+| POST | `/api/importar` | upload de CSV, OFX ou XLSX (multipart) |
 | GET | `/api/importacoes` | histórico de importações |
 | GET | `/api/estatisticas` | estatísticas do mês (`?mes=AAAA-MM`): categorias, estabelecimentos, parcelas, evolução |
+| GET | `/api/patrimonio` | contas e caixinhas em reais, cotação, CDI, rendimento estimado, evolução |
+| POST · PUT · DELETE | `/api/ativos` · `/api/ativos/{id}` | cria, configura (nome, meta, % do CDI) e apaga conta/caixinha |
+| PUT | `/api/ativos/{id}/saldo` | troca o saldo |
+| POST | `/api/ativos/{id}/movimento` | guarda (`valor_centavos` positivo) ou resgata (negativo); recusa resgate maior que o saldo |
+| GET | `/api/cambio/{USD\|EUR}` | cotação de agora e série do gráfico (`?periodo=1d\|5d\|1m\|6m\|1a\|5a\|max`) |
 | POST | `/api/chat` | pergunta ao assistente (`{"pergunta": "...", "historico": [...]}`) |
 
 Superfície protegida por token para automação externa: `/api/integracao/*` —
@@ -171,16 +176,27 @@ ver [INTEGRACAO.md](INTEGRACAO.md).
 
 | Campo | Obrigatório | Observação |
 |---|---|---|
-| `arquivo` | sim | o CSV, até 8 MB |
-| `conta` | não | `"Nubank Cartão"` |
+| `arquivo` | sim | CSV, OFX ou XLSX, até 8 MB |
+| `conta` | não | `"Nubank Cartão"`; vazio = o banco reconhecido (`"XP Cartão"`, `"Inter Conta"`) |
 | `pessoa` | não | quem gastou |
 | `tipo` | não | `auto` (padrão), `conta` ou `cartao` |
 | `prever` | não | `1` devolve o que aconteceria **sem gravar nada** |
 
 O importador:
 
-- aceita vírgula ou ponto-e-vírgula como separador, e trata o BOM do Excel
-- reconhece as colunas por vários nomes (`Data`/`date`, `Descrição`/`title`, `Valor`/`amount`)
+- lê **CSV**, **XLSX** (primeira aba que tiver o cabeçalho; data serial e double do Excel
+  convertidos) e **OFX** 1.x/2.x — o formato que todo banco brasileiro exporta; no OFX o banco sai
+  do código COMPE (`BANKID`) ou do `ORG` da fatura
+- reconhece o **layout de cada banco** pelo cabeçalho
+  ([layouts.go](backend/internal/importador/layouts.go)): Nubank (conta e fatura), **Inter** (conta
+  e fatura), **XP** (fatura com portador e extrato), C6 (conta e fatura), Bradesco (crédito e débito
+  em colunas separadas, histórico quebrado em duas linhas), Banco do Brasil (linhas de saldo
+  ignoradas, coluna Entrada/Saída), Santander, Mercado Pago e o extrato sem cabeçalho do Itaú;
+  layout desconhecido cai no genérico (qualquer planilha com data, descrição e valor)
+- pula o preâmbulo (agência, conta, período) até achar o cabeçalho e converte Windows-1252 para UTF-8
+- aceita vírgula, ponto-e-vírgula ou tab como separador, e trata o BOM do Excel
+- parcela em coluna própria (`1 de 3`, `2/10`) vira `Parcela N/M` na descrição, e o portador do
+  cartão vira a pessoa
 - detecta sozinho se é extrato (sinal define entrada/saída) ou fatura (tudo é despesa)
 - **recusa a linha** quando ela tem número de colunas diferente do cabeçalho — quase sempre é
   separador solto dentro de um campo, e sem essa checagem o mapeamento desliza e grava lixo

@@ -39,3 +39,41 @@ func TestAtivoValidar(t *testing.T) {
 		}
 	}
 }
+
+func TestAtivoMetaERendimentoValidados(t *testing.T) {
+	loBom := Ativo{Nome: "Reserva", Tipo: "caixinha", Moeda: "BRL", Meta: 1000000, RendeCDI: 100}
+	if err := loBom.Validar(); err != nil {
+		t.Errorf("caixinha com meta e 100%% do CDI recusada: %v", err)
+	}
+	for _, loRuim := range []Ativo{
+		{Nome: "X", Meta: -1},
+		{Nome: "X", RendeCDI: -5},
+		{Nome: "X", RendeCDI: 301},
+		{Nome: "X", Meta: maxSaldoAtivo + 1},
+	} {
+		if err := loRuim.ValidarConfig(); !errors.Is(err, ErrAtivoInvalido) {
+			t.Errorf("config %+v aceita", loRuim)
+		}
+	}
+}
+
+func TestRendimentoMes(t *testing.T) {
+	casos := []struct {
+		saldo Centavos
+		cdi   int64
+		pct   int
+		mes   Centavos
+	}{
+		{1000000, 1365, 100, 10720}, // R$ 10 mil a 100% do CDI de 13,65% rende R$ 107,20 no mes
+		{1000000, 1365, 110, 11798}, // 110% do CDI: o percentual vai na taxa diaria
+		{50000, 1365, 100, 536},
+		{1000000, 1365, 0, 0}, // nao rende
+		{0, 1365, 100, 0},
+		{1000000, 0, 100, 0}, // sem CDI (BCB fora do ar)
+	}
+	for _, c := range casos {
+		if lnMes := RendimentoMes(c.saldo, c.cdi, c.pct); lnMes != c.mes {
+			t.Errorf("RendimentoMes(%d, %d, %d) = %d, esperado %d", c.saldo, c.cdi, c.pct, lnMes, c.mes)
+		}
+	}
+}

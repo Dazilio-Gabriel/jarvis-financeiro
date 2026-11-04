@@ -64,6 +64,10 @@ export type Importacao = {
 export type ResultadoImport = {
   previa?: boolean
   arquivo: string
+  formato: 'csv' | 'xlsx' | 'ofx'
+  banco: string // vazio quando o layout e generico
+  layout: string // "Inter · extrato da conta"
+  conta: string // a informada ou a que veio do banco reconhecido
   tipo: string
   mes_fatura?: string
   total_linhas: number
@@ -382,6 +386,9 @@ export type Ativo = {
   moeda: Moeda
   saldo_centavos: number
   reais_centavos: number | null
+  meta_centavos: number // 0 = sem meta
+  rende_cdi: number // % do CDI; 0 = nao rende
+  rende_mes_centavos: number | null // estimativa do mes; null sem CDI
   atualizado_em: string
 }
 
@@ -393,13 +400,32 @@ export type Patrimonio = {
   por_tipo: Record<string, number>
   cotacoes: Partial<Record<'USD' | 'EUR', number>> // reais por unidade x10000
   cotacao_em: string
+  cdi: { taxa: number; dia: string } | null // taxa: % a.a. x100 (13,65% -> 1365)
+  rende_mes_centavos: number
   evolucao: { mes: string; total_centavos: number }[]
 }
 
 export const buscarPatrimonio = (sinal?: AbortSignal) => pedir<Patrimonio>('/api/patrimonio', { signal: sinal })
 
-export const criarAtivo = (a: { nome: string; tipo: string; moeda: Moeda; saldo_centavos: number }) =>
-  postarJSON<{ id: number }>('/api/ativos', a)
+export const criarAtivo = (a: {
+  nome: string
+  tipo: string
+  moeda: Moeda
+  saldo_centavos: number
+  meta_centavos?: number
+  rende_cdi?: number
+}) => postarJSON<{ id: number }>('/api/ativos', a)
+
+export const configurarAtivo = (id: number, c: { nome: string; meta_centavos: number; rende_cdi: number }) =>
+  pedir<{ ok: boolean }>(`/api/ativos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(c),
+  })
+
+/** valor positivo guarda, negativo resgata; devolve o saldo novo */
+export const movimentarAtivo = (id: number, valor_centavos: number) =>
+  postarJSON<{ saldo_centavos: number }>(`/api/ativos/${id}/movimento`, { valor_centavos })
 
 export const atualizarSaldoAtivo = (id: number, saldo_centavos: number) =>
   pedir<{ ok: boolean }>(`/api/ativos/${id}/saldo`, {
@@ -409,3 +435,17 @@ export const atualizarSaldoAtivo = (id: number, saldo_centavos: number) =>
   })
 
 export const apagarAtivo = (id: number) => pedir<{ ok: boolean }>(`/api/ativos/${id}`, { method: 'DELETE' })
+
+export type PeriodoCambio = '1d' | '5d' | '1m' | '6m' | '1a' | '5a' | 'max'
+
+/** Valores em reais por unidade x10000 (6,1615 -> 61615); tempos em segundos unix. */
+export type Cambio = {
+  moeda: 'USD' | 'EUR'
+  periodo: PeriodoCambio
+  agora: { valor: number; variacao: number; maxima: number; minima: number; em: number } | null
+  pontos: [number, number][]
+  fonte: string
+}
+
+export const buscarCambio = (moeda: 'USD' | 'EUR', periodo: PeriodoCambio, sinal?: AbortSignal) =>
+  pedir<Cambio>(`/api/cambio/${moeda}?periodo=${periodo}`, { signal: sinal })

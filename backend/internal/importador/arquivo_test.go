@@ -21,17 +21,17 @@ const cFatura = "date;title;amount\n" +
 	"2026-09-11;Netflix;55,90\n"
 
 func TestImportarExtrato(t *testing.T) {
-	loCSV := NovoCSV("extrato.csv", []byte(cExtrato), "Nubank", "Gabriel", Auto)
+	loArq := NovoArquivo("extrato.csv", []byte(cExtrato), "Nubank", "Gabriel", Auto)
 
-	laTran, err := loCSV.Importar(context.Background())
+	laTran, err := loArq.Importar(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loCSV.Detectado != Conta {
-		t.Errorf("detectou %q, esperado conta", loCSV.Detectado)
+	if loArq.Detectado != Conta {
+		t.Errorf("detectou %q, esperado conta", loArq.Detectado)
 	}
-	if len(laTran) != 3 || len(loCSV.Erros) != 0 {
-		t.Fatalf("%d transacoes e erros %v", len(laTran), loCSV.Erros)
+	if len(laTran) != 3 || len(loArq.Erros) != 0 {
+		t.Fatalf("%d transacoes e erros %v", len(laTran), loArq.Erros)
 	}
 
 	if laTran[0].Tipo != financas.Credito || laTran[0].Valor != 500000 {
@@ -46,14 +46,14 @@ func TestImportarExtrato(t *testing.T) {
 }
 
 func TestImportarFaturaViraDebito(t *testing.T) {
-	loCSV := NovoCSV("fatura.csv", []byte(cFatura), "Cartao", "", Auto)
+	loArq := NovoArquivo("fatura.csv", []byte(cFatura), "Cartao", "", Auto)
 
-	laTran, err := loCSV.Importar(context.Background())
+	laTran, err := loArq.Importar(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loCSV.Detectado != Cartao {
-		t.Errorf("detectou %q, esperado cartao", loCSV.Detectado)
+	if loArq.Detectado != Cartao {
+		t.Errorf("detectou %q, esperado cartao", loArq.Detectado)
 	}
 	for _, loTran := range laTran {
 		if loTran.Tipo != financas.Debito || loTran.Valor >= 0 {
@@ -71,13 +71,13 @@ func TestImportarFaturaNubankComEstornoEMesDaFatura(t *testing.T) {
 		"2026-10-22,Estorno de compra,-50.00\n"
 
 	ldNov := time.Date(2026, 11, 1, 0, 0, 0, 0, time.Local)
-	loCSV := NovoCSV("Nubank_2026-11-15.csv", []byte(lcDado), "", "", Auto).ComMesFatura(ldNov)
-	laTran, err := loCSV.Importar(context.Background())
+	loArq := NovoArquivo("Nubank_2026-11-15.csv", []byte(lcDado), "", "", Auto).ComMesFatura(ldNov)
+	laTran, err := loArq.Importar(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loCSV.Detectado != Cartao {
-		t.Fatalf("detectou %q; fatura com estorno tem que continuar sendo cartao", loCSV.Detectado)
+	if loArq.Detectado != Cartao {
+		t.Fatalf("detectou %q; fatura com estorno tem que continuar sendo cartao", loArq.Detectado)
 	}
 	if len(laTran) != 4 {
 		t.Fatalf("%d transacoes, esperado 4", len(laTran))
@@ -115,19 +115,19 @@ func TestImportarRegistraLinhaRuimEContinua(t *testing.T) {
 		"02/09/2026,0,Valor zero\n" +
 		"03/09/2026,-1.234,56,Virgula solta\n"
 
-	loCSV := NovoCSV("x.csv", []byte(lcDado), "", "", Conta)
-	laTran, err := loCSV.Importar(context.Background())
+	loArq := NovoArquivo("x.csv", []byte(lcDado), "", "", Conta)
+	laTran, err := loArq.Importar(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(laTran) != 1 || len(loCSV.Erros) != 3 {
-		t.Errorf("%d transacoes, erros: %v", len(laTran), loCSV.Erros)
+	if len(laTran) != 1 || len(loArq.Erros) != 3 {
+		t.Errorf("%d transacoes, erros: %v", len(laTran), loArq.Erros)
 	}
 }
 
 func TestImportarCabecalhoDesconhecido(t *testing.T) {
-	loCSV := NovoCSV("x.csv", []byte("a,b,c\n1,2,3\n"), "", "", Auto)
-	if _, err := loCSV.Importar(context.Background()); err == nil {
+	loArq := NovoArquivo("x.csv", []byte("a,b,c\n1,2,3\n"), "", "", Auto)
+	if _, err := loArq.Importar(context.Background()); err == nil {
 		t.Error("aceitou cabecalho sem data/descricao/valor")
 	}
 }
