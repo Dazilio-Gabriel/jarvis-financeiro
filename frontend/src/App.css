@@ -2293,17 +2293,17 @@ code {
   color: var(--on-night);
 }
 
-/* losango grande do logo, bem apagado, no canto */
+/* o quadrado arredondado do icone, grande e bem apagado, saindo pelo canto */
 .entrar-lado::after {
   content: '';
   position: absolute;
-  right: -140px;
-  bottom: -140px;
-  width: 360px;
-  height: 360px;
+  right: -120px;
+  bottom: -120px;
+  width: 340px;
+  height: 340px;
   border: 28px solid rgba(226, 85, 45, 0.12);
-  border-radius: 28px;
-  transform: rotate(45deg);
+  border-radius: 84px;
+  transform: rotate(-12deg);
   pointer-events: none;
 }
 

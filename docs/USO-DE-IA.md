@@ -320,6 +320,8 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   > C:\Users\devco\OneDrive\Desktop\JuditeVendas\plataforma\apps\painel\dist
 
   > ja sobe pro git tbm pf
+
+  > faça um icone melhor tbm pf
 - **Resultado:**
   - Visual trocado do tema "terminal" (preto + verde neon + fonte mono) para o do painel de
     referência: menu lateral escuro com grupos e ícones de traço, barra de topo com o nome da tela,
@@ -327,7 +329,8 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
     sistema; o botão do topo troca e guarda a escolha).
   - Cor da marca: o verde virou o laranja #E2552D. Verde e vermelho ficam só para dinheiro que
     entra/sai e para variação boa/ruim, para não confundir receita com alerta.
-  - Logo novo (losango branco no quadrado laranja), também no favicon (antes era o padrão do Vite).
+  - Ícone novo: "J" branco com a faísca do assistente num quadrado arredondado em degradê laranja,
+    no menu, no login e no favicon (antes era o raio padrão do Vite). Conferido de 16 a 160 px.
   - Tela de login dividida: lado escuro com a marca e o que o app faz, formulário à direita.
   - Rótulos em CAIXA ALTA no código viraram frase normal (o CSS põe em caixa alta onde é rótulo);
     leitor de tela lê melhor.
