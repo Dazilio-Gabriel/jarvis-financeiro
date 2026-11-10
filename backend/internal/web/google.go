@@ -47,9 +47,9 @@ func (s *Servidor) ComGoogle(pcID, pcSegr, pcBase string) *Servidor {
 	return s
 }
 
-// configAuth diz para a tela de login quais formas de entrar existem
+// configAuth diz para a tela de login quais formas de entrar (e de recuperar a senha) existem
 func (s *Servidor) configAuth(w http.ResponseWriter, r *http.Request) {
-	responderJSON(w, http.StatusOK, map[string]bool{"google": s.google != nil})
+	responderJSON(w, http.StatusOK, map[string]bool{"google": s.google != nil, "email": s.carteiro != nil})
 }
 
 // irParaGoogle manda o navegador para a tela de consentimento do Google.

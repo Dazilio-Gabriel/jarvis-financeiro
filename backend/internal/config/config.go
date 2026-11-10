@@ -21,6 +21,9 @@ type Config struct {
 	// "Entrar com Google": credencial OAuth do Google Cloud; URLPublica monta o endereco de retorno
 	GoogleID   string
 	GoogleSegr string
+	// "Esqueci minha senha": chave da API da Brevo e o remetente confirmado la
+	BrevoChave string
+	Remetente  string
 	URLPublica string
 	ClaudeKey  string
 
@@ -53,6 +56,8 @@ func Carregar(pcCami string) Config {
 		DonoEmail:  os.Getenv("DONO_EMAIL"),
 		GoogleID:   os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleSegr: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		BrevoChave: os.Getenv("BREVO_API_KEY"),
+		Remetente:  os.Getenv("EMAIL_REMETENTE"),
 		// Render preenche RENDER_EXTERNAL_URL sozinho; local, o Vite (5173) repassa /api para o Go
 		URLPublica: ou(os.Getenv("URL_PUBLICA"), ou(os.Getenv("RENDER_EXTERNAL_URL"), "http://localhost:5173")),
 		ClaudeKey:  os.Getenv("ANTHROPIC_API_KEY"),

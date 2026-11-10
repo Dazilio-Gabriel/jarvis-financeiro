@@ -31,6 +31,9 @@ type Servidor struct {
 	limCada   *limitador                         // cadastros por IP
 	limConv   *limitador                         // consultas de codigo de convite por IP
 	limChat   *limitador                         // perguntas ao assistente por usuario (cota da IA e de todos)
+	limEsqu   *limitador                         // pedidos de "esqueci a senha" por IP
+	limEnvi   *limitador                         // e-mails de nova senha por conta
+	limRede   *limitador                         // links de nova senha errados por IP
 	producao  bool                               // HTTPS garantido pela hospedagem: cookie Secure e HSTS sempre
 	donoMail  string                             // unico e-mail que pode assumir a familia 1
 	catIA     assistente.ModeloJSON              // nil = "Categorizar com IA" desligado
@@ -39,13 +42,17 @@ type Servidor struct {
 	cdi       fonteCDI                           // CDI do dia, para o rendimento das caixinhas
 	google    *oauth2.Config                     // nil = "Entrar com Google" desligado
 	userinfo  string                             // endpoint do perfil Google (trocado no teste)
+	carteiro  Carteiro                           // nil = "esqueci minha senha" desligado
+	urlBase   string                             // URL publica, para o link do e-mail
+	fundo     func(func())                       // roda o envio do e-mail; nil = goroutine (o teste roda na hora)
 }
 
 func NovoServidor(poRepo *armazenamento.MySQL, pcToke string) *Servidor {
 	loServ := &Servidor{repo: poRepo, token: pcToke, integFami: 1,
 		limLogi: novoLimitador(10, 15*time.Minute), limMail: novoLimitador(10, 15*time.Minute),
 		limCada: novoLimitador(10, time.Hour), limConv: novoLimitador(30, time.Hour),
-		limChat: novoLimitador(40, time.Hour), cotacao: novoAwesomeAPI(),
+		limChat: novoLimitador(40, time.Hour), limEsqu: novoLimitador(10, time.Hour),
+		limEnvi: novoLimitador(3, time.Hour), limRede: novoLimitador(20, time.Hour), cotacao: novoAwesomeAPI(),
 		serie: novoHistoricoCambio(), cdi: novoBCBCDI()}
 	if poRepo != nil {
 		loServ.auth = poRepo
@@ -82,6 +89,8 @@ func (s *Servidor) Rotas() http.Handler {
 	loMux.HandleFunc("POST /api/auth/sair", s.sair)
 	loMux.HandleFunc("GET /api/convite/{codigo}", s.convite)
 	loMux.HandleFunc("GET /api/auth/config", s.configAuth)
+	loMux.HandleFunc("POST /api/auth/esqueci", s.esqueciSenha)
+	loMux.HandleFunc("POST /api/auth/redefinir", s.redefinirSenha)
 	loMux.HandleFunc("GET /api/auth/google", s.irParaGoogle)
 	loMux.HandleFunc("GET /api/auth/google/retorno", s.retornoGoogle)
 

@@ -39,6 +39,8 @@ type autenticador interface {
 	CriarSessao(ctx context.Context, pnUsua int64, pcHash string, pdExpi time.Time) error
 	Sessao(ctx context.Context, pcHash string) (armazenamento.Usuario, error)
 	ApagarSessao(ctx context.Context, pcHash string) error
+	CriarRedefinicao(ctx context.Context, pnUsua int64, pcHash string, pdExpi time.Time) error
+	RedefinirSenha(ctx context.Context, pcHash, pcSenh string) (armazenamento.Usuario, error)
 	Membros(ctx context.Context, pnFami int64) ([]armazenamento.Usuario, error)
 }
 
@@ -319,6 +321,13 @@ func (l *limitador) bloqueado(pcChav string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return len(l.recentes(pcChav)) >= l.maximo
+}
+
+// limpar zera a chave (senha trocada: as tentativas de antes nao contam mais)
+func (l *limitador) limpar(pcChav string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.tentati, pcChav)
 }
 
 func (l *limitador) registrar(pcChav string) {

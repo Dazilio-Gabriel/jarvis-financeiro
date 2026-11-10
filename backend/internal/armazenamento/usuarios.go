@@ -27,6 +27,7 @@ var (
 	ErrConviteInvalido = errors.New("codigo de convite nao encontrado")
 	ErrNaoEncontrado   = errors.New("nao encontrado")
 	ErrSessaoExpirada  = errors.New("sessao expirada ou inexistente")
+	ErrLinkInvalido    = errors.New("link de nova senha invalido, usado ou vencido")
 	codigoDuplicadoSQL = uint16(1062)
 	alfabetoConvite    = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sem 0/O/1/I: codigo e lido em voz alta
 	categoriasIniciais = []struct{ nome, cor string }{      // mesmas cores da migration 005
@@ -231,6 +232,61 @@ func (m *MySQL) ApagarSessao(ctx context.Context, pcHash string) error {
 	}
 	_, err := m.db.ExecContext(ctx, `DELETE FROM sessoes WHERE expira_em < ?`, time.Now())
 	return err
+}
+
+// CriarRedefinicao guarda o hash do token de nova senha. Vale so o ultimo link pedido; aproveita
+// para limpar os vencidos de todo mundo.
+func (m *MySQL) CriarRedefinicao(ctx context.Context, pnUsua int64, pcHash string, pdExpi time.Time) error {
+	loTx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer loTx.Rollback()
+	if _, err := loTx.ExecContext(ctx, `DELETE FROM redefinicoes_senha WHERE usuario_id = ? OR expira_em < ?`,
+		pnUsua, time.Now()); err != nil {
+		return err
+	}
+	if _, err := loTx.ExecContext(ctx,
+		`INSERT INTO redefinicoes_senha (token_hash, usuario_id, expira_em) VALUES (?, ?, ?)`,
+		pcHash, pnUsua, pdExpi); err != nil {
+		return err
+	}
+	return loTx.Commit()
+}
+
+// RedefinirSenha troca a senha (pcSenh ja e o bcrypt) de quem tem o token cujo hash e pcHash.
+// O token vale uma vez e todas as sessoes abertas caem: quem troca a senha pode estar tirando
+// alguem de dentro da conta.
+func (m *MySQL) RedefinirSenha(ctx context.Context, pcHash, pcSenh string) (Usuario, error) {
+	loTx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Usuario{}, err
+	}
+	defer loTx.Rollback()
+
+	var lnUsua int64
+	// FOR UPDATE: dois cliques no mesmo link nao trocam a senha duas vezes
+	err = loTx.QueryRowContext(ctx, `SELECT usuario_id FROM redefinicoes_senha
+		WHERE token_hash = ? AND expira_em > ? FOR UPDATE`, pcHash, time.Now()).Scan(&lnUsua)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Usuario{}, ErrLinkInvalido
+	}
+	if err != nil {
+		return Usuario{}, err
+	}
+	if _, err := loTx.ExecContext(ctx, `UPDATE usuarios SET senha_hash = ? WHERE id = ?`, pcSenh, lnUsua); err != nil {
+		return Usuario{}, err
+	}
+	if _, err := loTx.ExecContext(ctx, `DELETE FROM redefinicoes_senha WHERE usuario_id = ?`, lnUsua); err != nil {
+		return Usuario{}, err
+	}
+	if _, err := loTx.ExecContext(ctx, `DELETE FROM sessoes WHERE usuario_id = ?`, lnUsua); err != nil {
+		return Usuario{}, err
+	}
+	if err := loTx.Commit(); err != nil {
+		return Usuario{}, err
+	}
+	return m.usuarioPorID(ctx, lnUsua)
 }
 
 // Membros lista quem participa da familia

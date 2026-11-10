@@ -28,5 +28,9 @@ services:
         sync: false # opcional: "Entrar com Google" (ver docs/NUVEM.md)
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: BREVO_API_KEY
+        sync: false # opcional: "esqueci minha senha" por e-mail (ver docs/NUVEM.md)
+      - key: EMAIL_REMETENTE
+        sync: false # o e-mail confirmado como remetente na Brevo
       - key: API_TOKEN
         generateValue: true # token da integracao (n8n), gerado pelo Render

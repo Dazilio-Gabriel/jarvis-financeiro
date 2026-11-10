@@ -340,3 +340,23 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
     inline).
   - Conferido: `tsc` + `vite build` + `oxlint` sem erro nem aviso.
 - **Revisão humana:** _(preencher)_
+
+### 2026-11-10 — "Esqueci minha senha" e o botão do Google
+- **Quem:** Gabriel Dazilio Fanchiotti · **Ferramenta:** Claude Code (Claude Opus 5.5)
+- **Prompt (literal):**
+  > outra coisa, preciso que mude a parte de login, nao tem a opcao de login com o google, digo nao
+  > tem a poha do botao e preciso que coloque um "esqueci minha senha"
+- **Resultado:**
+  - **Botão do Google:** o código já existia; o botão não aparecia porque o servidor publicado está
+    sem `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (`/api/auth/config` respondia `google:false`).
+    Falta criar a credencial no Google Cloud (passo 3 de `docs/NUVEM.md`).
+  - **Esqueci minha senha:** link na tela de login → e-mail com link de uso único, válido por 30 min
+    (`POST /api/auth/esqueci` e `POST /api/auth/redefinir`, migration 008). Só o hash do token vai
+    para o banco; o token fica depois do `#`; trocar a senha derruba as sessões abertas; resposta igual
+    exista ou não a conta, com o envio em segundo plano para o tempo também não entregar; limites por
+    IP e por conta. E-mail pela API HTTP da Brevo (plano gratuito), ligado por `BREVO_API_KEY` e
+    `EMAIL_REMETENTE`.
+  - Testes: fluxo completo com carteiro falso (e-mail sem conta, link antigo, token errado, senha
+    curta, link usado duas vezes, sessão antiga derrubada, senha antiga recusada), limite de envios,
+    cliente da Brevo contra servidor falso, HTML do e-mail escapado e integração no MySQL 8.4.
+- **Revisão humana:** _(preencher)_

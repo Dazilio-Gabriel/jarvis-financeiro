@@ -387,3 +387,50 @@ func TestIntegracaoPatrimonio(t *testing.T) {
 		t.Errorf("historico com %d pontos, esperado 5", len(laPont))
 	}
 }
+
+func TestIntegracaoRedefinirSenha(t *testing.T) {
+	loRepo := abrirTeste(t)
+	ctx := context.Background()
+	lcMail := fmt.Sprintf("r-%d@jarvis.local", time.Now().UnixNano())
+
+	loUsua, err := loRepo.Cadastrar(ctx, "Redefine", lcMail, "hash-antigo", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		loRepo.db.Exec(`DELETE FROM usuarios WHERE id = ?`, loUsua.ID)
+		loRepo.db.Exec(`DELETE FROM categorias WHERE familia_id = ?`, loUsua.FamiliaID)
+		loRepo.db.Exec(`DELETE FROM familias WHERE id = ?`, loUsua.FamiliaID)
+	})
+	lcSess := "s-" + lcMail[:20]
+	if err := loRepo.CriarSessao(ctx, loUsua.ID, lcSess, time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	// vencido nao vale; pedir de novo invalida o link anterior
+	if err := loRepo.CriarRedefinicao(ctx, loUsua.ID, "venc-"+lcMail[:20], time.Now().Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loRepo.RedefinirSenha(ctx, "venc-"+lcMail[:20], "x"); !errors.Is(err, ErrLinkInvalido) {
+		t.Errorf("link vencido aceito: %v", err)
+	}
+	loRepo.CriarRedefinicao(ctx, loUsua.ID, "prim-"+lcMail[:20], time.Now().Add(time.Hour))
+	loRepo.CriarRedefinicao(ctx, loUsua.ID, "segu-"+lcMail[:20], time.Now().Add(time.Hour))
+	if _, err := loRepo.RedefinirSenha(ctx, "prim-"+lcMail[:20], "x"); !errors.Is(err, ErrLinkInvalido) {
+		t.Errorf("link anterior continuou valendo: %v", err)
+	}
+
+	loDono, err := loRepo.RedefinirSenha(ctx, "segu-"+lcMail[:20], "hash-novo")
+	if err != nil || loDono.ID != loUsua.ID {
+		t.Fatalf("redefinir: %+v, %v", loDono, err)
+	}
+	if _, lcHash, _ := loRepo.SenhaDoEmail(ctx, lcMail); lcHash != "hash-novo" {
+		t.Errorf("senha gravada = %q", lcHash)
+	}
+	if _, err := loRepo.Sessao(ctx, lcSess); !errors.Is(err, ErrSessaoExpirada) {
+		t.Errorf("sessao de antes da troca continuou valendo: %v", err)
+	}
+	if _, err := loRepo.RedefinirSenha(ctx, "segu-"+lcMail[:20], "de-novo"); !errors.Is(err, ErrLinkInvalido) {
+		t.Errorf("link usado duas vezes: %v", err)
+	}
+}

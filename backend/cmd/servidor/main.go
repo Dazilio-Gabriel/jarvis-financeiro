@@ -63,6 +63,12 @@ func main() {
 	if loConf.GoogleID != "" {
 		log.Printf("login com Google ligado (retorno em %s/api/auth/google/retorno)", loConf.URLPublica)
 	}
+	if loConf.BrevoChave != "" && loConf.Remetente != "" {
+		loWeb.ComEmail(web.NovoBrevo(loConf.BrevoChave, loConf.Remetente), loConf.URLPublica)
+		log.Printf("esqueci minha senha ligado (e-mail sai de %s)", loConf.Remetente)
+	} else {
+		log.Println("BREVO_API_KEY/EMAIL_REMETENTE vazio: esqueci minha senha desligado")
+	}
 	if loConf.Producao && loConf.DonoEmail == "" {
 		log.Println("AVISO: PRODUCAO sem DONO_EMAIL: ninguem assume a familia 1 (os dados de antes do login)")
 	}

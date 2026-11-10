@@ -35,6 +35,8 @@ const MENU_ADMIN: Item = { rota: '/admin', icone: 'escudo', nome: 'Administra√ß√
 export default function App() {
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined)
   const navegar = useNavigate()
+  // o link do e-mail de nova senha abre a tela de troca mesmo com alguem logado neste navegador
+  const redefinindo = useLocation().pathname === '/redefinir-senha'
 
   useEffect(() => {
     const controle = new AbortController()
@@ -59,7 +61,7 @@ export default function App() {
       </div>
     )
   }
-  if (usuario === null) {
+  if (usuario === null || redefinindo) {
     return (
       <Entrar
         aoEntrar={(u) => {

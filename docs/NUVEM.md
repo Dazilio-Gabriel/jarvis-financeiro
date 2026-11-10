@@ -116,6 +116,23 @@ Como funciona: o Jarvis só aceita conta Google com **e-mail verificado**. Se j�
 com o mesmo e-mail (cadastrado com senha), a conta Google é ligada a ele. O botão só aparece na tela
 de login quando as duas variáveis estão configuradas.
 
+### 3b. "Esqueci minha senha" por e-mail (opcional, uns 5 minutos)
+O e-mail sai pela API HTTP da **Brevo** (plano gratuito: 300 e-mails por dia, sem precisar de
+domínio próprio). É HTTP e não SMTP de propósito: hospedagem gratuita costuma barrar SMTP.
+1. https://www.brevo.com → crie a conta gratuita.
+2. **Remetentes, domínios e IPs → Remetentes → Adicionar remetente**: use o e-mail que vai aparecer
+   como remetente (ex.: o seu Gmail) e confirme pelo link que a Brevo manda.
+3. **SMTP e API → Chaves de API → Gerar nova chave**.
+4. No Render, em **Environment**: `BREVO_API_KEY` = a chave e `EMAIL_REMETENTE` = o e-mail do passo 2.
+   Salve; o Render publica de novo sozinho. No log aparece `esqueci minha senha ligado`.
+
+Como funciona: o link vale **30 minutos**, funciona **uma vez só** e pedir outro invalida o anterior.
+No banco fica só o hash do token (tabela `redefinicoes_senha`), e o token vai depois do `#` no link,
+parte que o navegador não manda para o servidor. Trocar a senha derruba todas as sessões abertas da
+conta. A tela responde igual exista ou não o e-mail (não revela quem tem cadastro), e há limite de
+3 e-mails por hora por conta e 10 pedidos por hora por IP. Sem as variáveis, o link "Esqueci minha
+senha" aparece, mas avisa que a recuperação ainda não foi ligada.
+
 ### 4. Painel de administração
 Quem entra com o e-mail de `DONO_EMAIL` vê o menu **Administração**: usuários, famílias,
 cadastros por dia, quem está ativo, uso e tokens da IA e a lista de usuários. Para todos os outros

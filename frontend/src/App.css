@@ -2430,6 +2430,40 @@ code {
   margin-top: 4px;
 }
 
+.esqueci-link {
+  align-self: flex-end;
+  margin-top: -6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.voltar-link {
+  align-self: center;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.aviso-ok {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--ok-bg);
+  color: var(--ok-tx);
+  font-size: 13.5px;
+}
+
+.aviso-ok p,
+.aviso-convite p:last-child {
+  margin: 0;
+}
+
+.aviso-ok p + p {
+  margin-top: 6px;
+}
+
 .entrar-erro {
   margin: 0;
   padding: 9px 12px;

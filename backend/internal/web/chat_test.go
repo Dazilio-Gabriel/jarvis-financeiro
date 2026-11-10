@@ -38,10 +38,17 @@ type authFalso struct {
 	dono     bool // o ultimo cadastro podia assumir a familia 1?
 	google   string
 	usoIA    int
+	redef    map[string]redefFalsa // hash do token de nova senha
+}
+
+type redefFalsa struct {
+	usuario int64
+	expira  time.Time
 }
 
 func novoAuthFalso() *authFalso {
 	return &authFalso{usuarios: map[string]armazenamento.Usuario{}, senhas: map[string]string{},
+		redef:   map[string]redefFalsa{},
 		sessoes: map[string]armazenamento.Usuario{hashToken("tok-1"): {ID: 1, FamiliaID: 10, Nome: "Ana"}}}
 }
 
@@ -119,6 +126,36 @@ func (a *authFalso) Sessao(_ context.Context, pcHash string) (armazenamento.Usua
 func (a *authFalso) ApagarSessao(_ context.Context, pcHash string) error {
 	delete(a.sessoes, pcHash)
 	return nil
+}
+
+func (a *authFalso) CriarRedefinicao(_ context.Context, pnUsua int64, pcHash string, pdExpi time.Time) error {
+	for lcHash, loRede := range a.redef {
+		if loRede.usuario == pnUsua {
+			delete(a.redef, lcHash) // como no banco: so o ultimo link vale
+		}
+	}
+	a.redef[pcHash] = redefFalsa{pnUsua, pdExpi}
+	return nil
+}
+
+func (a *authFalso) RedefinirSenha(_ context.Context, pcHash, pcSenh string) (armazenamento.Usuario, error) {
+	loRede, llExis := a.redef[pcHash]
+	if !llExis || time.Now().After(loRede.expira) {
+		return armazenamento.Usuario{}, armazenamento.ErrLinkInvalido
+	}
+	delete(a.redef, pcHash)
+	for lcHash, loUsua := range a.sessoes {
+		if loUsua.ID == loRede.usuario {
+			delete(a.sessoes, lcHash)
+		}
+	}
+	for lcMail, loUsua := range a.usuarios {
+		if loUsua.ID == loRede.usuario {
+			a.senhas[lcMail] = pcSenh
+			return loUsua, nil
+		}
+	}
+	return armazenamento.Usuario{}, armazenamento.ErrNaoEncontrado
 }
 
 func (a *authFalso) Membros(context.Context, int64) ([]armazenamento.Usuario, error) {

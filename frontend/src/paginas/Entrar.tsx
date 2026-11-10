@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { buscarConfigAuth, cadastrar, consultarConvite, entrar, type Usuario } from '../api'
+import { buscarConfigAuth, cadastrar, consultarConvite, entrar, esqueciSenha, redefinirSenha, type Usuario } from '../api'
 
 type Modo = 'entrar' | 'cadastrar'
+// login normal, pedido do link de nova senha, ou a pagina que o link do e-mail abre
+type Tela = 'login' | 'esqueci' | 'redefinir'
 
 // o servidor volta do Google com ?erro_google=<motivo> quando algo da errado
 const ERROS_GOOGLE: Record<string, string> = {
@@ -26,13 +28,16 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
     return motivo ? (ERROS_GOOGLE[motivo] ?? ERROS_GOOGLE.erro) : ''
   })
   const [enviando, setEnviando] = useState(false)
-  const [temGoogle, setTemGoogle] = useState(false)
+  const [tela, setTela] = useState<Tela>(() => (location.pathname === '/redefinir-senha' ? 'redefinir' : 'login'))
+  // null = ainda perguntando ao servidor o que esta ligado
+  const [config, setConfig] = useState<{ google: boolean; email: boolean } | null>(null)
+  const temGoogle = config?.google === true
 
   useEffect(() => {
     const controle = new AbortController()
     buscarConfigAuth(controle.signal)
-      .then((c) => setTemGoogle(c.google))
-      .catch(() => setTemGoogle(false))
+      .then(setConfig)
+      .catch(() => setConfig({ google: false, email: false }))
     return () => controle.abort()
   }, [])
   // nome da familia do convite: quem recebe um link sabe em qual familia vai entrar antes de
@@ -106,126 +111,265 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
         <div className="entrar-marca-mobile">
           <Marca />
         </div>
-        <div className="entrar-titulo">
-          <h2>{modo === 'entrar' ? 'Entrar' : 'Criar conta'}</h2>
-          <p className="dica">
-            {modo === 'entrar' ? 'Bem-vindo de volta.' : 'Leva menos de um minuto.'}
-          </p>
-        </div>
-
-        <div className="entrar-abas">
-          <button className={modo === 'entrar' ? 'ativa' : ''} onClick={() => setModo('entrar')} type="button">
-            entrar
-          </button>
-          <button
-            className={modo === 'cadastrar' ? 'ativa' : ''}
-            onClick={() => setModo('cadastrar')}
-            type="button"
-          >
-            criar conta
-          </button>
-        </div>
-
-        <form onSubmit={enviar} className="entrar-form">
-          {modo === 'cadastrar' && (
-            <label className="campo">
-              <span>Nome</span>
-              <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required />
-            </label>
-          )}
-          <label className="campo">
-            <span>E-mail</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-          <label className="campo">
-            <span>Senha</span>
-            <input
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
-              minLength={modo === 'cadastrar' ? 8 : undefined}
-              required
-            />
-          </label>
-          {modo === 'cadastrar' && (
-            <label className="campo">
-              <span>Código de convite (opcional)</span>
-              <input
-                value={convite}
-                onChange={(e) => setConvite(e.target.value.toUpperCase())}
-                placeholder="para entrar na família de alguém"
-              />
-            </label>
-          )}
-
-          {modo === 'cadastrar' && codigo && (
-            <div className="aviso-convite">
-              {familiaConvite ? (
-                <>
-                  <p>
-                    Você vai entrar na <strong>{familiaConvite}</strong>. Todos os membros dela vão ver os
-                    lançamentos e as faturas que você importar.
-                  </p>
-                  <label className="confirma">
-                    <input
-                      type="checkbox"
-                      checked={conviteConfirmado}
-                      onChange={(e) => setConviteConfirmado(e.target.checked)}
-                    />
-                    conheço quem me enviou este convite
-                  </label>
-                </>
-              ) : (
-                <p>Código de convite não encontrado. Apague-o para criar uma família só sua.</p>
-              )}
-            </div>
-          )}
-
-          {erro && <p className="entrar-erro">{erro}</p>}
-
-          <button className="botao primario" disabled={enviando}>
-            {enviando ? 'aguarde…' : modo === 'entrar' ? 'entrar' : 'criar conta'}
-          </button>
-        </form>
-
-        {temGoogle && (
+        {tela === 'esqueci' && (
+          <Esqueci emailInicial={email} ligado={config?.email !== false} aoVoltar={() => setTela('login')} />
+        )}
+        {tela === 'redefinir' && <Redefinir aoEntrar={aoEntrar} aoPedirOutro={() => setTela('esqueci')} />}
+        {tela === 'login' && (
           <>
-            <div className="ou">
-              <span>ou</span>
+            <div className="entrar-titulo">
+              <h2>{modo === 'entrar' ? 'Entrar' : 'Criar conta'}</h2>
+              <p className="dica">
+                {modo === 'entrar' ? 'Bem-vindo de volta.' : 'Leva menos de um minuto.'}
+              </p>
             </div>
-            {/* link e nao fetch: o Google precisa da navegacao de pagina inteira */}
-            <a
-              className="botao google"
-              href={`/api/auth/google${codigo && conviteConfirmado ? `?convite=${encodeURIComponent(codigo)}` : ''}`}
-              onClick={(e) => {
-                if (modo === 'cadastrar' && codigo && !conviteConfirmado) {
-                  e.preventDefault()
-                  setErro('confirme que conhece quem enviou o convite, ou apague o código')
-                }
-              }}
-            >
-              <span className="google-g" aria-hidden="true">
-                G
-              </span>
-              {modo === 'cadastrar' ? 'criar conta com Google' : 'entrar com Google'}
-            </a>
+
+            <div className="entrar-abas">
+              <button className={modo === 'entrar' ? 'ativa' : ''} onClick={() => setModo('entrar')} type="button">
+                entrar
+              </button>
+              <button
+                className={modo === 'cadastrar' ? 'ativa' : ''}
+                onClick={() => setModo('cadastrar')}
+                type="button"
+              >
+                criar conta
+              </button>
+            </div>
+
+            <form onSubmit={enviar} className="entrar-form">
+              {modo === 'cadastrar' && (
+                <label className="campo">
+                  <span>Nome</span>
+                  <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required />
+                </label>
+              )}
+              <label className="campo">
+                <span>E-mail</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              <label className="campo">
+                <span>Senha</span>
+                <input
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
+                  minLength={modo === 'cadastrar' ? 8 : undefined}
+                  required
+                />
+              </label>
+              {modo === 'entrar' && (
+                <button
+                  type="button"
+                  className="link esqueci-link"
+                  onClick={() => {
+                    setErro('')
+                    setTela('esqueci')
+                  }}
+                >
+                  Esqueci minha senha
+                </button>
+              )}
+              {modo === 'cadastrar' && (
+                <label className="campo">
+                  <span>Código de convite (opcional)</span>
+                  <input
+                    value={convite}
+                    onChange={(e) => setConvite(e.target.value.toUpperCase())}
+                    placeholder="para entrar na família de alguém"
+                  />
+                </label>
+              )}
+
+              {modo === 'cadastrar' && codigo && (
+                <div className="aviso-convite">
+                  {familiaConvite ? (
+                    <>
+                      <p>
+                        Você vai entrar na <strong>{familiaConvite}</strong>. Todos os membros dela vão ver os
+                        lançamentos e as faturas que você importar.
+                      </p>
+                      <label className="confirma">
+                        <input
+                          type="checkbox"
+                          checked={conviteConfirmado}
+                          onChange={(e) => setConviteConfirmado(e.target.checked)}
+                        />
+                        conheço quem me enviou este convite
+                      </label>
+                    </>
+                  ) : (
+                    <p>Código de convite não encontrado. Apague-o para criar uma família só sua.</p>
+                  )}
+                </div>
+              )}
+
+              {erro && <p className="entrar-erro">{erro}</p>}
+
+              <button className="botao primario" disabled={enviando}>
+                {enviando ? 'aguarde…' : modo === 'entrar' ? 'entrar' : 'criar conta'}
+              </button>
+            </form>
+
+            {temGoogle && (
+              <>
+                <div className="ou">
+                  <span>ou</span>
+                </div>
+                {/* link e nao fetch: o Google precisa da navegacao de pagina inteira */}
+                <a
+                  className="botao google"
+                  href={`/api/auth/google${codigo && conviteConfirmado ? `?convite=${encodeURIComponent(codigo)}` : ''}`}
+                  onClick={(e) => {
+                    if (modo === 'cadastrar' && codigo && !conviteConfirmado) {
+                      e.preventDefault()
+                      setErro('confirme que conhece quem enviou o convite, ou apague o código')
+                    }
+                  }}
+                >
+                  <span className="google-g" aria-hidden="true">
+                    G
+                  </span>
+                  {modo === 'cadastrar' ? 'criar conta com Google' : 'entrar com Google'}
+                </a>
+              </>
+            )}
+
+            <p className="dica">
+              {modo === 'cadastrar'
+                ? 'Sem convite, você ganha uma família nova. Com convite, compartilha os lançamentos de quem convidou.'
+                : 'Seus dados financeiros só aparecem para quem é da sua família.'}
+            </p>
           </>
         )}
-
-        <p className="dica">
-          {modo === 'cadastrar'
-            ? 'Sem convite, você ganha uma família nova. Com convite, compartilha os lançamentos de quem convidou.'
-            : 'Seus dados financeiros só aparecem para quem é da sua família.'}
-        </p>
       </div>
     </div>
+  )
+}
+
+const mensagem = (err: unknown, padrao: string) => (err instanceof Error ? err.message : padrao)
+
+/** Pede o link de nova senha. A tela diz a mesma coisa exista ou nao a conta (o servidor tambem). */
+function Esqueci({ emailInicial, ligado, aoVoltar }: { emailInicial: string; ligado: boolean; aoVoltar: () => void }) {
+  const [email, setEmail] = useState(emailInicial)
+  const [fase, setFase] = useState<'form' | 'enviando' | 'enviado'>('form')
+  const [erro, setErro] = useState('')
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault()
+    setErro('')
+    setFase('enviando')
+    try {
+      await esqueciSenha(email)
+      setFase('enviado')
+    } catch (err: unknown) {
+      setErro(mensagem(err, 'não foi possível pedir o link'))
+      setFase('form')
+    }
+  }
+
+  return (
+    <>
+      <div className="entrar-titulo">
+        <h2>Recuperar senha</h2>
+        <p className="dica">Mandamos um link para o e-mail da conta. Por ele você cria uma senha nova.</p>
+      </div>
+
+      {!ligado ? (
+        <div className="aviso-convite">
+          <p>A recuperação por e-mail ainda não foi ligada neste servidor.</p>
+          <p>Se você criou a conta com o Google, entre pelo botão do Google. Se não, fale com quem administra o Jarvis.</p>
+        </div>
+      ) : fase === 'enviado' ? (
+        <div className="aviso-ok" role="status">
+          <p>
+            <b>Pronto.</b> Se <b>{email.trim()}</b> tiver cadastro, o link chega em alguns minutos.
+          </p>
+          <p>Ele vale por 30 minutos e funciona uma vez só. Não chegou? Confira o spam.</p>
+        </div>
+      ) : (
+        <form onSubmit={enviar} className="entrar-form">
+          <label className="campo">
+            <span>E-mail da conta</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required autoFocus />
+          </label>
+          {erro && <p className="entrar-erro">{erro}</p>}
+          <button className="botao primario" disabled={fase === 'enviando'}>
+            {fase === 'enviando' ? 'enviando…' : 'mandar link'}
+          </button>
+        </form>
+      )}
+
+      <button type="button" className="link voltar-link" onClick={aoVoltar}>
+        ← voltar para entrar
+      </button>
+    </>
+  )
+}
+
+/** Pagina que o link do e-mail abre: /redefinir-senha#<token>. */
+function Redefinir({ aoEntrar, aoPedirOutro }: { aoEntrar: (u: Usuario) => void; aoPedirOutro: () => void }) {
+  const [token] = useState(() => location.hash.slice(1))
+  const [senha, setSenha] = useState('')
+  const [repete, setRepete] = useState('')
+  const [erro, setErro] = useState(() => (location.hash.length > 1 ? '' : 'Link incompleto. Peça um link novo.'))
+  const [enviando, setEnviando] = useState(false)
+
+  // tira o token da barra de endereco: nao fica no historico nem vai junto num print da tela
+  useEffect(() => {
+    history.replaceState(null, '', location.pathname)
+  }, [])
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault()
+    if (senha !== repete) {
+      setErro('as duas senhas não são iguais')
+      return
+    }
+    setErro('')
+    setEnviando(true)
+    try {
+      aoEntrar(await redefinirSenha(token, senha))
+    } catch (err: unknown) {
+      setErro(mensagem(err, 'não foi possível trocar a senha'))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="entrar-titulo">
+        <h2>Criar senha nova</h2>
+        <p className="dica">Ao salvar, você já entra. Quem estiver logado na sua conta em outro aparelho sai.</p>
+      </div>
+      <form onSubmit={enviar} className="entrar-form">
+        <label className="campo">
+          <span>Senha nova</span>
+          <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)}
+            autoComplete="new-password" minLength={8} maxLength={72} required autoFocus />
+        </label>
+        <label className="campo">
+          <span>Repita a senha nova</span>
+          <input type="password" value={repete} onChange={(e) => setRepete(e.target.value)}
+            autoComplete="new-password" minLength={8} maxLength={72} required />
+        </label>
+        {erro && <p className="entrar-erro">{erro}</p>}
+        <button className="botao primario" disabled={enviando || !token}>
+          {enviando ? 'salvando…' : 'salvar e entrar'}
+        </button>
+      </form>
+      <button type="button" className="link voltar-link" onClick={aoPedirOutro}>
+        pedir um link novo
+      </button>
+    </>
   )
 }
 

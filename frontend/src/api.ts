@@ -310,7 +310,14 @@ export const consultarConvite = (codigo: string, sinal?: AbortSignal) =>
 export const gerarNovoConvite = () => postarJSON<{ convite: string }>('/api/familia/convite', {})
 
 export const buscarConfigAuth = (sinal?: AbortSignal) =>
-  pedir<{ google: boolean }>('/api/auth/config', { signal: sinal })
+  pedir<{ google: boolean; email: boolean }>('/api/auth/config', { signal: sinal })
+
+/** Manda o link de nova senha. A resposta e a mesma exista ou nao a conta. */
+export const esqueciSenha = (email: string) => postarJSON<{ ok: boolean }>('/api/auth/esqueci', { email })
+
+/** Troca a senha com o token do link; ja devolve o usuario logado. */
+export const redefinirSenha = (token: string, senha: string) =>
+  postarJSON<Usuario>('/api/auth/redefinir', { token, senha })
 
 export type PontoDia = { dia: string; valor: number }
 
