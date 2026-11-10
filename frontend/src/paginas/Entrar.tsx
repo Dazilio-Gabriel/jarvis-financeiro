@@ -77,13 +77,40 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
 
   return (
     <div className="entrar">
+      <aside className="entrar-lado">
+        <Marca />
+        <div className="entrar-chamada">
+          <span className="rotulo">Assistente financeiro da família</span>
+          <h1>
+            As contas da casa, <em>num lugar só</em>.
+          </h1>
+          <ul>
+            <li>
+              <b>Importe a fatura do banco</b>
+              <span>CSV, OFX ou XLSX, já separado por categoria.</span>
+            </li>
+            <li>
+              <b>Pergunte ao Jarvis</b>
+              <span>quanto gastou, onde e com o quê, em português.</span>
+            </li>
+            <li>
+              <b>Divida com a família</b>
+              <span>por convite; cada família só vê os próprios lançamentos.</span>
+            </li>
+          </ul>
+        </div>
+        <small>Projeto Integrador IV · FAESA</small>
+      </aside>
+
       <div className="entrar-caixa cartao surgir">
-        <div className="marca">
-          <span className="marca-icone">◆</span>
-          <div className="marca-texto">
-            <span className="marca-nome">JARVIS</span>
-            <span className="marca-sub">FINANCEIRO</span>
-          </div>
+        <div className="entrar-marca-mobile">
+          <Marca />
+        </div>
+        <div className="entrar-titulo">
+          <h2>{modo === 'entrar' ? 'Entrar' : 'Criar conta'}</h2>
+          <p className="dica">
+            {modo === 'entrar' ? 'Bem-vindo de volta.' : 'Leva menos de um minuto.'}
+          </p>
         </div>
 
         <div className="entrar-abas">
@@ -102,12 +129,12 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
         <form onSubmit={enviar} className="entrar-form">
           {modo === 'cadastrar' && (
             <label className="campo">
-              <span>NOME</span>
+              <span>Nome</span>
               <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required />
             </label>
           )}
           <label className="campo">
-            <span>E-MAIL</span>
+            <span>E-mail</span>
             <input
               type="email"
               value={email}
@@ -117,7 +144,7 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
             />
           </label>
           <label className="campo">
-            <span>SENHA</span>
+            <span>Senha</span>
             <input
               type="password"
               value={senha}
@@ -129,7 +156,7 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
           </label>
           {modo === 'cadastrar' && (
             <label className="campo">
-              <span>CÓDIGO DE CONVITE (OPCIONAL)</span>
+              <span>Código de convite (opcional)</span>
               <input
                 value={convite}
                 onChange={(e) => setConvite(e.target.value.toUpperCase())}
@@ -198,6 +225,18 @@ export default function Entrar({ aoEntrar }: { aoEntrar: (u: Usuario) => void })
             : 'Seus dados financeiros só aparecem para quem é da sua família.'}
         </p>
       </div>
+    </div>
+  )
+}
+
+function Marca() {
+  return (
+    <div className="marca">
+      <img src="/favicon.svg" alt="" width="36" height="36" />
+      <span>
+        <b>Jarvis</b>
+        <small>Financeiro</small>
+      </span>
     </div>
   )
 }

@@ -31,7 +31,7 @@ export default function Categorias() {
   return (
     <>
       <Cabecalho
-        rotulo="CATEGORIAS · ORÇAMENTO · REGRAS"
+        rotulo="Categorias · orçamento · regras"
         titulo={
           <>
             onde o dinheiro <em>deveria</em> ir
@@ -56,9 +56,9 @@ export default function Categorias() {
       {cats.fase === 'ok' && (
         <div className="grade">
           <Cartao
-            titulo="META MENSAL POR CATEGORIA"
+            titulo="Meta mensal por categoria"
             indice={0}
-            rodape={<Pill>{categorias.length} CATEGORIAS</Pill>}
+            rodape={<Pill>{categorias.length} categorias</Pill>}
           >
             <div className="lista">
               {categorias.map((c, i) => (
@@ -76,17 +76,17 @@ export default function Categorias() {
           </Cartao>
 
           <Cartao
-            titulo="REGRAS DE CATEGORIZAÇÃO"
+            titulo="Regras de categorização"
             indice={1}
             rodape={
               <Pill>
-                {regras.fase === 'ok' ? regras.dados.regras.length : 0} REGRAS
+                {regras.fase === 'ok' ? regras.dados.regras.length : 0} regras
               </Pill>
             }
           >
             <form className="form-regra" onSubmit={adicionarRegra}>
               <label className="campo cresce">
-                <span>SE A DESCRIÇÃO CONTIVER</span>
+                <span>Se a descrição contiver</span>
                 <input
                   value={padrao}
                   onChange={(e) => setPadrao(e.target.value)}
@@ -95,7 +95,7 @@ export default function Categorias() {
               </label>
 
               <label className="campo">
-                <span>CATEGORIZAR COMO</span>
+                <span>Categorizar como</span>
                 <select
                   value={categoriaNova}
                   onChange={(e) =>
@@ -144,7 +144,7 @@ export default function Categorias() {
                         <span className="regra-cat">
                           <span
                             className="dot"
-                            style={{ background: cat?.cor ?? 'var(--txt-fraco)' }}
+                            style={{ background: cat?.cor ?? 'var(--soft)' }}
                           />
                           {cat?.nome ?? `#${r.categoria_id}`}
                         </span>

@@ -33,7 +33,7 @@ export default function Admin() {
 
   const cabecalho = (
     <Cabecalho
-      rotulo="ADMINISTRAÇÃO · SÓ PARA O DONO"
+      rotulo="Administração · só para o dono"
       titulo={
         <>
           visão do <em>sistema</em>
@@ -66,15 +66,15 @@ export default function Admin() {
       {cabecalho}
 
       <section className="kpis">
-        <Kpi rotulo="USUÁRIOS" centavos={p.usuarios} sufixo="" destaque indice={0} />
-        <Kpi rotulo="FAMÍLIAS" centavos={p.familias} sufixo="" indice={1} />
-        <Kpi rotulo="ATIVOS EM 7 DIAS" centavos={p.ativos_7} sufixo="" indice={2} />
-        <Kpi rotulo="NOVOS EM 30 DIAS" centavos={p.novos_30} sufixo="" indice={3} />
+        <Kpi rotulo="Usuários" centavos={p.usuarios} sufixo="" destaque indice={0} />
+        <Kpi rotulo="Famílias" centavos={p.familias} sufixo="" indice={1} />
+        <Kpi rotulo="Ativos em 7 dias" centavos={p.ativos_7} sufixo="" indice={2} />
+        <Kpi rotulo="Novos em 30 dias" centavos={p.novos_30} sufixo="" indice={3} />
       </section>
 
       <div className="grade">
         <Cartao
-          titulo="CADASTROS · 30 DIAS"
+          titulo="Cadastros · 30 dias"
           indice={1}
           extra={<Pill>{p.novos_7} na semana</Pill>}
           rodape={
@@ -88,7 +88,7 @@ export default function Admin() {
         </Cartao>
 
         <Cartao
-          titulo="ASSISTENTE (IA) · 30 DIAS"
+          titulo="Assistente (IA) · 30 dias"
           indice={2}
           extra={<Pill tom={p.chat_ligado ? 'ok' : 'alerta'}>{p.chat_ligado ? 'ligado' : 'desligado'}</Pill>}
           rodape={
@@ -104,18 +104,18 @@ export default function Admin() {
       </div>
 
       <section className="kpis">
-        <Kpi rotulo="LANÇAMENTOS NO BANCO" centavos={p.transacoes} sufixo="" indice={0} />
-        <Kpi rotulo="IMPORTAÇÕES EM 30 DIAS" centavos={p.importacoes_30} sufixo="" indice={1} />
-        <Kpi rotulo="PERGUNTAS EM 30 DIAS" centavos={p.perguntas_30} sufixo="" indice={2} />
+        <Kpi rotulo="Lançamentos no banco" centavos={p.transacoes} sufixo="" indice={0} />
+        <Kpi rotulo="Importações em 30 dias" centavos={p.importacoes_30} sufixo="" indice={1} />
+        <Kpi rotulo="Perguntas em 30 dias" centavos={p.perguntas_30} sufixo="" indice={2} />
         <Kpi
-          rotulo="TOKENS POR PERGUNTA"
+          rotulo="Tokens por pergunta"
           centavos={p.perguntas_30 ? Math.round(p.tokens_30 / p.perguntas_30) : 0}
           sufixo=""
           indice={3}
         />
       </section>
 
-      <Cartao titulo={`USUÁRIOS · ${p.lista.length}`} indice={3}>
+      <Cartao titulo={`Usuários · ${p.lista.length}`} indice={3}>
         <div className="tabela-rolagem">
           <table className="tabela-estat">
             <thead>

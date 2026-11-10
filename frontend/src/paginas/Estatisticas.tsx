@@ -26,7 +26,7 @@ export default function Estatisticas() {
 
   const cabecalho = (
     <Cabecalho
-      rotulo={`ESTATÍSTICAS · ${rotuloMes(`${mes}-01`).toUpperCase()}`}
+      rotulo={`Estatísticas · ${rotuloMes(`${mes}-01`).toUpperCase()}`}
       titulo={
         <>
           para onde foi <em>o dinheiro</em>
@@ -80,10 +80,10 @@ export default function Estatisticas() {
       {cabecalho}
 
       <section className="kpis">
-        <Kpi rotulo="GASTO NO MÊS" centavos={d.saidas_centavos} cor="vermelho" destaque indice={0} />
-        <Kpi rotulo="MÊS ANTERIOR" centavos={d.saidas_mes_anterior} indice={1} />
-        <Kpi rotulo="PARCELAS NESTE MÊS" centavos={d.parcelas_mes_centavos} indice={2} />
-        <Kpi rotulo="PARCELAS A VENCER" centavos={d.parcelas_futuro_centavos} cor="vermelho" indice={3} />
+        <Kpi rotulo="Gasto no mês" centavos={d.saidas_centavos} cor="vermelho" destaque indice={0} />
+        <Kpi rotulo="Mês anterior" centavos={d.saidas_mes_anterior} indice={1} />
+        <Kpi rotulo="Parcelas neste mês" centavos={d.parcelas_mes_centavos} indice={2} />
+        <Kpi rotulo="Parcelas a vencer" centavos={d.parcelas_futuro_centavos} cor="vermelho" indice={3} />
       </section>
 
       {topo && (
@@ -104,7 +104,7 @@ export default function Estatisticas() {
 
       <div className="grade">
         <Cartao
-          titulo="POR CATEGORIA"
+          titulo="Por categoria"
           indice={1}
           extra={
             d.categorias.some((c) => c.categoria_id === null) && (
@@ -135,7 +135,7 @@ export default function Estatisticas() {
           </div>
         </Cartao>
 
-        <Cartao titulo="ONDE VOCÊ MAIS GASTOU" indice={2}>
+        <Cartao titulo="Onde você mais gastou" indice={2}>
           <ul className="lista-esta">
             {d.estabelecimentos.slice(0, 10).map((e) => (
               <li key={e.nome}>
@@ -159,7 +159,7 @@ export default function Estatisticas() {
         </Cartao>
       </div>
 
-      <Cartao titulo="CATEGORIAS EM DETALHE" indice={3}>
+      <Cartao titulo="Categorias em detalhe" indice={3}>
         <div className="tabela-rolagem">
           <table className="tabela-estat">
             <thead>
@@ -204,7 +204,7 @@ export default function Estatisticas() {
       </Cartao>
 
       <Cartao
-        titulo="COMPRAS PARCELADAS"
+        titulo="Compras parceladas"
         indice={4}
         extra={d.parcelas.length > 0 && <Pill tom="alerta">{d.parcelas.length} ativas</Pill>}
       >
@@ -240,7 +240,7 @@ export default function Estatisticas() {
         )}
       </Cartao>
 
-      <Cartao titulo="EVOLUÇÃO POR CATEGORIA · 6 MESES" indice={5}>
+      <Cartao titulo="Evolução por categoria · 6 meses" indice={5}>
         <div className="empilhado">
           {d.evolucao.map((m) => (
             <div key={m.mes} className={`emp-col ${m.mes === d.mes ? 'atual' : ''}`}>

@@ -311,3 +311,29 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
   desses arquivos, sem um arquivo real em mãos; o primeiro arquivo de verdade confirma (o genérico
   e o OFX cobrem variações).
 - **Revisão humana:** _(preencher)_
+
+### 2026-11-10 — Nova identidade visual (padrão do painel JuditeVendas, laranja #E2552D)
+- **Quem:** Gabriel Dazilio Fanchiotti · **Ferramenta:** Claude Code (Claude Opus 5.5)
+- **Prompt (literal):**
+  > claude, to achando a identidade visual do meu jarvis financeiro feia, consegue fazer nesse padrao
+  > aq?? pode mudar a cor do verde para essa mesma daq, gostei muito
+  > C:\Users\devco\OneDrive\Desktop\JuditeVendas\plataforma\apps\painel\dist
+
+  > ja sobe pro git tbm pf
+- **Resultado:**
+  - Visual trocado do tema "terminal" (preto + verde neon + fonte mono) para o do painel de
+    referência: menu lateral escuro com grupos e ícones de traço, barra de topo com o nome da tela,
+    fundo claro, cartões brancos com sombra leve, fonte Nunito Sans e tema claro/escuro (segue o
+    sistema; o botão do topo troca e guarda a escolha).
+  - Cor da marca: o verde virou o laranja #E2552D. Verde e vermelho ficam só para dinheiro que
+    entra/sai e para variação boa/ruim, para não confundir receita com alerta.
+  - Logo novo (losango branco no quadrado laranja), também no favicon (antes era o padrão do Vite).
+  - Tela de login dividida: lado escuro com a marca e o que o app faz, formulário à direita.
+  - Rótulos em CAIXA ALTA no código viraram frase normal (o CSS põe em caixa alta onde é rótulo);
+    leitor de tela lê melhor.
+  - Fonte servida pelo próprio app (`@fontsource-variable/nunito-sans`): a CSP do servidor
+    (`font-src 'self'`) bloqueia o Google Fonts, e assim nenhum IP de usuário vai para o Google.
+    O tema salvo é aplicado por `public/tema.js` antes da primeira pintura (a CSP bloqueia script
+    inline).
+  - Conferido: `tsc` + `vite build` + `oxlint` sem erro nem aviso.
+- **Revisão humana:** _(preencher)_

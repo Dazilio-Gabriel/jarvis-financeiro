@@ -16,7 +16,7 @@ export default function Rosca({
   const inicios = tamanhos.map((_, i) => tamanhos.slice(0, i).reduce((a, b) => a + b, 0))
   return (
     <svg viewBox="0 0 200 200" className="rosca" role="img" aria-label={rotulo}>
-      <circle cx="100" cy="100" r={r} fill="none" stroke="var(--barra-fundo)" strokeWidth="26" />
+      <circle cx="100" cy="100" r={r} fill="none" stroke="var(--trilho)" strokeWidth="26" />
       {fatias.map((f, i) => (
         <circle
           key={f.nome}

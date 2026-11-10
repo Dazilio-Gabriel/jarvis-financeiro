@@ -165,7 +165,7 @@ export default function GraficoCambio({
           pontos={pontos}
           periodo={valido?.periodo ?? periodo}
           base={noDia ? base : null}
-          cor={sobe ? 'var(--verde)' : 'var(--vermelho)'}
+          cor={sobe ? 'var(--ok)' : 'var(--bad)'}
           carregando={carregando}
           rotulo={`${m.nome} em reais, ${textoPeriodo}: de ${fmtTaxa(pontos[0]?.[1] ?? 0)} a ${fmtTaxa(atual)}`}
         />
@@ -302,7 +302,7 @@ function Linha({
         {pf && (
           <g>
             <line x1={x(foco!)} x2={x(foco!)} y1={MARGEM.topo} y2={MARGEM.topo + h} className="cambio-mira" />
-            <circle cx={x(foco!)} cy={y(pf[1])} r="4.5" fill={cor} stroke="var(--sup)" strokeWidth="2" />
+            <circle cx={x(foco!)} cy={y(pf[1])} r="4.5" fill={cor} stroke="var(--surface)" strokeWidth="2" />
           </g>
         )}
         <rect x={MARGEM.esq} y={0} width={w} height={ALTURA} fill="transparent"

@@ -60,7 +60,7 @@ export default function Investimentos() {
   const moedaGrafico = !p.por_moeda.EUR && p.por_moeda.USD ? 'USD' : 'EUR'
 
   const cambio = (
-    <Cartao titulo="CÂMBIO AO VIVO" indice={1}>
+    <Cartao titulo="Câmbio ao vivo" indice={1}>
       <GraficoCambio
         inicial={moedaGrafico}
         saldos={{ EUR: p.por_moeda.EUR?.saldo_centavos, USD: p.por_moeda.USD?.saldo_centavos }}
@@ -71,7 +71,7 @@ export default function Investimentos() {
   return (
     <>
       <Cabecalho
-        rotulo="INVESTIMENTOS · PATRIMÔNIO"
+        rotulo="Investimentos · patrimônio"
         titulo={
           <>
             você tem <em>{fmtBRL(p.total_centavos)}</em>
@@ -112,7 +112,7 @@ export default function Investimentos() {
       ) : (
         <>
           <section className="kpis">
-            <Kpi rotulo="PATRIMÔNIO TOTAL" centavos={p.total_centavos} cor="verde" destaque indice={0} />
+            <Kpi rotulo="Patrimônio total" centavos={p.total_centavos} cor="verde" destaque indice={0} />
             {MOEDAS.map((m, i) => {
               const pm = p.por_moeda[m.codigo]
               return (
@@ -120,8 +120,8 @@ export default function Investimentos() {
                   key={m.codigo}
                   rotulo={
                     m.codigo === 'BRL'
-                      ? 'EM REAIS'
-                      : `EM ${m.nome.toUpperCase()} · ${pm ? fmtMoeda(pm.saldo_centavos, m.codigo) : `${m.simbolo} 0,00`}`
+                      ? 'Em reais'
+                      : `Em ${m.nome} · ${pm ? fmtMoeda(pm.saldo_centavos, m.codigo) : `${m.simbolo} 0,00`}`
                   }
                   centavos={pm?.reais_centavos ?? 0}
                   indice={i + 1}
@@ -129,7 +129,7 @@ export default function Investimentos() {
               )
             })}
             {p.rende_mes_centavos > 0 && (
-              <Kpi rotulo="RENDE POR MÊS · ESTIMATIVA" centavos={p.rende_mes_centavos} cor="verde" indice={4} />
+              <Kpi rotulo="Rende por mês · estimativa" centavos={p.rende_mes_centavos} cor="verde" indice={4} />
             )}
           </section>
 
@@ -141,7 +141,7 @@ export default function Investimentos() {
 
           {cambio}
 
-          <Cartao titulo={`CONTAS E CAIXINHAS · ${p.ativos.length}`} indice={2}>
+          <Cartao titulo={`Contas e caixinhas · ${p.ativos.length}`} indice={2}>
             <p className="dica">
               Guarde e resgate pelos botões, ou digite o saldo novo direto. Cada mudança entra na evolução lá embaixo.
             </p>
@@ -153,7 +153,7 @@ export default function Investimentos() {
           </Cartao>
 
           <div className="grade">
-            <Cartao titulo="ONDE ESTÁ O DINHEIRO" indice={3}>
+            <Cartao titulo="Onde está o dinheiro" indice={3}>
               <div className="rosca-bloco">
                 <Rosca
                   rotulo="patrimônio por conta"
@@ -178,7 +178,7 @@ export default function Investimentos() {
               </div>
             </Cartao>
 
-            <Cartao titulo="POR TIPO" indice={4}>
+            <Cartao titulo="Por tipo" indice={4}>
               <ul className="lista-esta">
                 {Object.entries(p.por_tipo)
                   .sort((a, b) => b[1] - a[1])
@@ -204,7 +204,7 @@ export default function Investimentos() {
             </Cartao>
           </div>
 
-          <Cartao titulo="EVOLUÇÃO DO PATRIMÔNIO · 12 MESES" indice={5}>
+          <Cartao titulo="Evolução do patrimônio · 12 meses" indice={5}>
             <p className="dica">
               Saldo de cada conta no fim do mês, convertido pela cotação de hoje (a curva mostra quanto você
               guardou, sem o sobe e desce do câmbio).
@@ -228,7 +228,7 @@ function Evolucao({ meses }: { meses: Patrimonio['evolucao'] }) {
             className="emp-pilha"
             style={{
               height: `${(m.total_centavos / maior) * 180}px`,
-              background: m.total_centavos ? 'var(--verde)' : 'transparent', // mes sem dado fica vazio
+              background: m.total_centavos ? 'var(--brand)' : 'transparent', // mes sem dado fica vazio
             }}
             title={`${curtoMes(m.mes)}: ${fmtBRL(m.total_centavos)}`}
           />
@@ -408,7 +408,7 @@ function Movimento({ ativo, resgate, aoTerminar }: { ativo: Ativo; resgate: bool
 
   return (
     <form className="ativo-painel surgir" onSubmit={enviar}>
-      <span className="rotulo fraco">{resgate ? 'RESGATAR DE' : 'GUARDAR EM'} {ativo.nome.toUpperCase()}</span>
+      <span className="rotulo fraco">{resgate ? 'Resgatar de' : 'Guardar em'} {ativo.nome}</span>
       <span className="campo-orca">
         <em>{simbolo}</em>
         <input autoFocus value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="100,00"
@@ -452,16 +452,16 @@ function Config({ ativo, cdi, aoTerminar }: { ativo: Ativo; cdi: number | null; 
   return (
     <form className="ativo-painel campos surgir" onSubmit={enviar}>
       <label className="campo cresce">
-        <span>NOME</span>
+        <span>Nome</span>
         <input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={60} />
       </label>
       <label className="campo">
-        <span>META (OPCIONAL)</span>
+        <span>Meta (opcional)</span>
         <input value={meta} onChange={(e) => setMeta(e.target.value)} placeholder="10.000,00" inputMode="decimal" />
       </label>
       {ativo.moeda === 'BRL' && (
         <label className="campo" title={cdi ? `CDI hoje: ${fmtCDI(cdi)}` : undefined}>
-          <span>RENDE % DO CDI</span>
+          <span>Rende % do CDI</span>
           <input value={rende} onChange={(e) => setRende(e.target.value)} placeholder="100" inputMode="numeric" />
         </label>
       )}
@@ -504,14 +504,14 @@ function NovaConta({ cdi, aoCriar }: { cdi: number | null; aoCriar: () => void }
   }
 
   return (
-    <Cartao titulo="NOVA CONTA OU CAIXINHA" indice={0}>
+    <Cartao titulo="Nova conta ou caixinha" indice={0}>
       <form className="campos" onSubmit={enviar}>
         <label className="campo cresce">
-          <span>NOME</span>
+          <span>Nome</span>
           <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Caixinha viagem, Conta euro…" maxLength={60} />
         </label>
         <label className="campo">
-          <span>TIPO</span>
+          <span>Tipo</span>
           <select
             value={tipo}
             onChange={(e) => {
@@ -529,7 +529,7 @@ function NovaConta({ cdi, aoCriar }: { cdi: number | null; aoCriar: () => void }
           </select>
         </label>
         <label className="campo">
-          <span>MOEDA</span>
+          <span>Moeda</span>
           <select value={moeda} onChange={(e) => setMoeda(e.target.value as Moeda)}>
             {MOEDAS.map((m) => (
               <option key={m.codigo} value={m.codigo}>
@@ -539,16 +539,16 @@ function NovaConta({ cdi, aoCriar }: { cdi: number | null; aoCriar: () => void }
           </select>
         </label>
         <label className="campo">
-          <span>SALDO DE HOJE</span>
+          <span>Saldo de hoje</span>
           <input value={saldo} onChange={(e) => setSaldo(e.target.value)} placeholder="1.234,56" inputMode="decimal" />
         </label>
         <label className="campo">
-          <span>META (OPCIONAL)</span>
+          <span>Meta (opcional)</span>
           <input value={meta} onChange={(e) => setMeta(e.target.value)} placeholder="10.000,00" inputMode="decimal" />
         </label>
         {moeda === 'BRL' && (
           <label className="campo" title={cdi ? `CDI hoje: ${fmtCDI(cdi)}` : undefined}>
-            <span>RENDE % DO CDI</span>
+            <span>Rende % do CDI</span>
             <input value={rende} onChange={(e) => setRende(e.target.value)} placeholder="100" inputMode="numeric" />
           </label>
         )}

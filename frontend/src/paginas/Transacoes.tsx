@@ -56,7 +56,7 @@ export default function Transacoes() {
   return (
     <>
       <Cabecalho
-        rotulo="LANÇAMENTOS"
+        rotulo="Lançamentos"
         titulo={
           <>
             todas as <em>transações</em>
@@ -65,7 +65,7 @@ export default function Transacoes() {
         sub={dados.fase === 'ok' ? `${dados.dados.total} no período` : 'carregando…'}
       />
 
-      <Cartao titulo="FILTROS" indice={0}>
+      <Cartao titulo="Filtros" indice={0}>
         <form className="filtros" onSubmit={aplicarBusca}>
           <label className="campo">
             <span>DE</span>
@@ -80,7 +80,7 @@ export default function Transacoes() {
           </label>
 
           <label className="campo">
-            <span>ATÉ</span>
+            <span>Até</span>
             <input
               type="date"
               value={ate}
@@ -92,7 +92,7 @@ export default function Transacoes() {
           </label>
 
           <label className="campo">
-            <span>CATEGORIA</span>
+            <span>Categoria</span>
             <select
               value={categoria}
               onChange={(e) => {
@@ -112,7 +112,7 @@ export default function Transacoes() {
           </label>
 
           <label className="campo cresce">
-            <span>BUSCAR</span>
+            <span>Buscar</span>
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
@@ -182,7 +182,7 @@ export default function Transacoes() {
                           <span className="cat-celula">
                             <span
                               className="dot"
-                              style={{ background: cat?.cor ?? 'var(--txt-fraco)' }}
+                              style={{ background: cat?.cor ?? 'var(--soft)' }}
                             />
                             <select
                               className="cat-select"

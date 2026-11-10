@@ -17,7 +17,7 @@ export default function Dashboard() {
   if (resumo.fase === 'carregando') {
     return (
       <>
-        <Cabecalho rotulo="CARREGANDO" titulo="Dashboard" />
+        <Cabecalho rotulo="Carregando" titulo="Dashboard" />
         <Carregando linhas={5} />
       </>
     )
@@ -26,7 +26,7 @@ export default function Dashboard() {
   if (resumo.fase === 'erro') {
     return (
       <>
-        <Cabecalho rotulo="ERRO" titulo="Dashboard" />
+        <Cabecalho rotulo="Erro" titulo="Dashboard" />
         <Erro mensagem={resumo.mensagem} aoTentar={recarregar} />
       </>
     )
@@ -42,7 +42,7 @@ export default function Dashboard() {
   return (
     <>
       <Cabecalho
-        rotulo={`RESUMO · ${rotuloMes(r.de).toUpperCase()}`}
+        rotulo={`Resumo · ${rotuloMes(r.de).toUpperCase()}`}
         titulo={
           semDados ? (
             <>nenhum lançamento ainda</>
@@ -80,17 +80,17 @@ export default function Dashboard() {
       ) : (
         <>
           <section className="kpis">
-            <Kpi rotulo="ENTRADAS" centavos={r.entradas_centavos} cor="verde" indice={0} />
-            <Kpi rotulo="SAÍDAS" centavos={r.saidas_centavos} cor="vermelho" indice={1} />
+            <Kpi rotulo="Entradas" centavos={r.entradas_centavos} cor="verde" indice={0} />
+            <Kpi rotulo="Saídas" centavos={r.saidas_centavos} cor="vermelho" indice={1} />
             <Kpi
-              rotulo="SALDO"
+              rotulo="Saldo"
               centavos={r.saldo_centavos}
               cor={r.saldo_centavos >= 0 ? 'verde' : 'vermelho'}
               destaque
               indice={2}
             />
             <Kpi
-              rotulo="LANÇAMENTOS"
+              rotulo="Lançamentos"
               centavos={r.transacoes}
               cor="neutro"
               indice={3}
@@ -100,13 +100,13 @@ export default function Dashboard() {
 
           <div className="grade">
             <Cartao
-              titulo="GASTOS POR CATEGORIA"
-              extra={<span className="rotulo fraco">ORÇAMENTO</span>}
+              titulo="Gastos por categoria"
+              extra={<span className="rotulo fraco">Orçamento</span>}
               indice={4}
               rodape={
                 <>
-                  <Pill>{r.por_categoria.length} CATEGORIAS</Pill>
-                  {estouradas > 0 && <Pill tom="alerta">{estouradas} ESTOURADAS</Pill>}
+                  <Pill>{r.por_categoria.length} categorias</Pill>
+                  {estouradas > 0 && <Pill tom="alerta">{estouradas} estouradas</Pill>}
                 </>
               }
             >
@@ -158,7 +158,7 @@ export default function Dashboard() {
             </Cartao>
 
             <Cartao
-              titulo="ÚLTIMOS LANÇAMENTOS"
+              titulo="Últimos lançamentos"
               indice={5}
               extra={
                 <NavLink to="/transacoes" className="link">
@@ -197,7 +197,7 @@ export default function Dashboard() {
 
           {patrimonio.fase === 'ok' && (
             <Cartao
-              titulo="INVESTIMENTOS"
+              titulo="Investimentos"
               indice={5}
               extra={
                 <NavLink to="/investimentos" className="botao pequeno">
@@ -212,7 +212,7 @@ export default function Dashboard() {
               ) : (
                 <div className="patrimonio-resumo">
                   <div>
-                    <span className="rotulo fraco">PATRIMÔNIO</span>
+                    <span className="rotulo fraco">Patrimônio</span>
                     <strong className="kpi-valor verde">{fmtBRL(patrimonio.dados.total_centavos)}</strong>
                   </div>
                   <ul>
@@ -234,7 +234,7 @@ export default function Dashboard() {
           )}
 
           {evolucao.fase === 'ok' && evolucao.dados.meses.length > 1 && (
-            <Cartao titulo="EVOLUÇÃO MENSAL" indice={6}>
+            <Cartao titulo="Evolução mensal" indice={6}>
               <Evolucao meses={evolucao.dados.meses} />
             </Cartao>
           )}

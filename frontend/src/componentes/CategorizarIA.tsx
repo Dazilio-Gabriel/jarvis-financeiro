@@ -63,7 +63,7 @@ export default function CategorizarIA({
 
   return (
     <Cartao
-      titulo="CATEGORIZAÇÃO AUTOMÁTICA"
+      titulo="Categorização automática"
       indice={0}
       className="categorizar-ia"
       extra={
@@ -102,7 +102,7 @@ export default function CategorizarIA({
       {lista.length > 0 && (
         <>
           <span className="rotulo fraco cat-ia-rotulo">
-            {resultado ? 'NÃO RECONHECI ESTES — ME DIGA O QUE SÃO' : 'SEM CATEGORIA'}
+            {resultado ? 'Não reconheci estes — me diga o que são' : 'Sem categoria'}
           </span>
           <ul className="cat-ia-lista">
             {lista.map((p) => (

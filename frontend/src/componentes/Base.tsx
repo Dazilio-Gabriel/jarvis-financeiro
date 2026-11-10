@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { definirVisaoMes, visaoMes, type VisaoMes } from '../api'
 import { fmtBRL, rotuloMes, somarMes, useContador } from '../util'
 
-/** Cabecalho de pagina, com titulo grande e rotulo mono em cima. */
+/** Cabecalho de pagina: rotulo laranja em caixa alta em cima e titulo grande. */
 export function Cabecalho({
   rotulo,
   titulo,
@@ -17,9 +17,7 @@ export function Cabecalho({
   return (
     <header className="cabecalho surgir">
       <div>
-        <span className="rotulo">
-          <span className="dot pulsa" /> {rotulo}
-        </span>
+        <span className="rotulo">{rotulo}</span>
         <h1>{titulo}</h1>
         {sub && <p className="cabecalho-sub">{sub}</p>}
       </div>
@@ -50,7 +48,7 @@ export function Cartao({
     >
       {titulo && (
         <header className="cartao-topo">
-          <span className="rotulo fraco">{titulo}</span>
+          <h2 className="cartao-titulo">{titulo}</h2>
           {extra}
         </header>
       )}
@@ -83,7 +81,7 @@ export function Kpi({
       className={`kpi surgir ${destaque ? 'destaque' : ''}`}
       style={{ '--i': indice } as React.CSSProperties}
     >
-      <span className="rotulo fraco">{rotulo}</span>
+      <span className="kpi-rotulo">{rotulo}</span>
       {/* sufixo definido (mesmo vazio) = numero cru; undefined = valor em reais */}
       <strong className={`kpi-valor ${cor}`}>
         {sufixo !== undefined ? `${animado}${sufixo}` : fmtBRL(animado)}

@@ -39,12 +39,12 @@ export default function Familia() {
   return (
     <>
       <Cabecalho
-        rotulo="FAMÍLIA · MEMBROS E CONVITE"
+        rotulo="Família · membros e convite"
         titulo={<em>{f.nome}</em>}
         sub="todos os membros veem e editam os mesmos lançamentos"
       />
 
-      <Cartao titulo="CONVIDAR ALGUÉM" indice={0}>
+      <Cartao titulo="Convidar alguém" indice={0}>
         <p className="dica">
           Mande este link para quem divide as contas com você. Ao criar a conta por ele, a pessoa entra
           direto na sua família.
@@ -61,7 +61,7 @@ export default function Familia() {
         </div>
       </Cartao>
 
-      <Cartao titulo={`MEMBROS · ${f.membros.length}`} indice={1}>
+      <Cartao titulo={`Membros · ${f.membros.length}`} indice={1}>
         <ul className="lista">
           {f.membros.map((m) => (
             <li key={m.id} className="linha">

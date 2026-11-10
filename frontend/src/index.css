@@ -1,68 +1,161 @@
+/* Identidade no padrao do painel JuditeVendas: laranja #E2552D, Nunito Sans, menu escuro, fundo claro.
+   Verde e vermelho ficam so para dinheiro que entra/sai; a marca e o laranja. */
+
 :root {
-  --fundo: #070b09;
-  --sup: #0e1411;
-  --sup-verde: #0f1a13;
-  --sup-amarelo: #17150c;
+  color-scheme: light;
+  --brand: #e2552d;
+  --brand-btn: #c9461f;
+  --brand-btn-hover: #b23c19;
+  --brand-texto: #b83e1b;
+  --brand-suave: rgba(226, 85, 45, 0.1);
+  --brand-borda: rgba(226, 85, 45, 0.35);
 
-  --borda: #1c2822;
-  --verde-borda: #1f4d33;
-  --vermelho-borda: #4d2027;
-  --amarelo-borda: #4d4020;
+  --bg: #f6f5f4;
+  --surface: #ffffff;
+  --surface-2: #faf9f8;
+  --hover: #f3f1ef;
+  --ink: #24201d;
+  --muted: #5f5752;
+  --soft: #857c76;
+  --line: #ebe4de;
+  --line-forte: #dcd3cb;
+  --trilho: #f0edea;
 
-  --txt: #e4ece7;
-  --txt-fraco: #6f8279;
+  --night: #1f1b19;
+  --on-night: #f4efe9;
+  --on-night-muted: #b4aaa2;
+  --night-line: rgba(255, 255, 255, 0.09);
+  --night-hover: rgba(255, 255, 255, 0.06);
 
-  --verde: #38e07b;
-  --verde-glow: #38e07b66;
-  --vermelho: #e0566a;
-  --amarelo: #e0be3a;
+  --ok-bg: #e6f4ea;
+  --ok-tx: #0b6b2a;
+  --ok: #0ca30c;
+  --warn-bg: #fff4d6;
+  --warn-tx: #7a5200;
+  --warn: #fab219;
+  --bad-bg: #fde8e6;
+  --bad-tx: #a1271f;
+  --bad: #d03b3b;
+  --info-bg: #e8f0fb;
+  --info-tx: #1c5cab;
 
-  --barra-fundo: #182420;
-
-  --mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
-
-  color-scheme: dark;
+  --shadow: 0 1px 2px rgba(36, 32, 29, 0.05), 0 10px 28px rgba(36, 32, 29, 0.06);
+  --shadow-lg: 0 24px 60px rgba(20, 14, 10, 0.22);
+  --r-card: 14px;
+  --r-ctl: 8px;
+  --font: 'Nunito Sans Variable', 'Nunito Sans', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
 
-* {
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --brand: #f0703f;
+    --brand-btn: #c9461f;
+    --brand-btn-hover: #d9522a;
+    --brand-texto: #f2845a;
+    --brand-suave: rgba(240, 112, 63, 0.14);
+    --brand-borda: rgba(240, 112, 63, 0.4);
+    --bg: #141110;
+    --surface: #1d1917;
+    --surface-2: #221d1b;
+    --hover: #282220;
+    --ink: #f4efe9;
+    --muted: #bbb1a9;
+    --soft: #978d86;
+    --line: #332c28;
+    --line-forte: #433a35;
+    --trilho: #2a2421;
+    --night: #0f0d0c;
+    --night-line: rgba(255, 255, 255, 0.07);
+    --ok-bg: rgba(12, 163, 12, 0.16);
+    --ok-tx: #6fd36f;
+    --ok: #34c759;
+    --warn-bg: rgba(250, 178, 25, 0.16);
+    --warn-tx: #f7c75a;
+    --bad-bg: rgba(208, 59, 59, 0.2);
+    --bad-tx: #f08a8a;
+    --bad: #e5534b;
+    --info-bg: rgba(57, 135, 229, 0.18);
+    --info-tx: #8dbbf2;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.28);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --brand: #f0703f;
+  --brand-btn: #c9461f;
+  --brand-btn-hover: #d9522a;
+  --brand-texto: #f2845a;
+  --brand-suave: rgba(240, 112, 63, 0.14);
+  --brand-borda: rgba(240, 112, 63, 0.4);
+  --bg: #141110;
+  --surface: #1d1917;
+  --surface-2: #221d1b;
+  --hover: #282220;
+  --ink: #f4efe9;
+  --muted: #bbb1a9;
+  --soft: #978d86;
+  --line: #332c28;
+  --line-forte: #433a35;
+  --trilho: #2a2421;
+  --night: #0f0d0c;
+  --night-line: rgba(255, 255, 255, 0.07);
+  --ok-bg: rgba(12, 163, 12, 0.16);
+  --ok-tx: #6fd36f;
+  --ok: #34c759;
+  --warn-bg: rgba(250, 178, 25, 0.16);
+  --warn-tx: #f7c75a;
+  --bad-bg: rgba(208, 59, 59, 0.2);
+  --bad-tx: #f08a8a;
+  --bad: #e5534b;
+  --info-bg: rgba(57, 135, 229, 0.18);
+  --info-tx: #8dbbf2;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--fundo);
-  color: var(--txt);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  line-height: 1.6;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-
-  /* brilho verde difuso no topo, como na referencia */
-  background-image: radial-gradient(
-    ellipse 90% 55% at 50% -20%,
-    #103b2333 0%,
-    transparent 70%
-  );
-  background-repeat: no-repeat;
-  background-attachment: fixed;
 }
 
-/* Lista de opcoes do <select>: o Windows desenha a caixa nativa com fundo branco e ela herdava o
-   texto claro do tema, ficando ilegivel. Fundo e texto explicitos em todo seletor do site. */
-select {
-  color-scheme: dark;
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
 }
 
+a {
+  color: var(--brand-texto);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* A lista nativa do <select> no Windows nao herda o tema: fundo e texto explicitos. */
 select option,
 select optgroup {
-  background-color: var(--sup);
-  color: var(--txt);
-}
-
-select option:checked {
-  background-color: var(--verde-borda);
-  color: var(--txt);
+  background-color: var(--surface);
+  color: var(--ink);
 }

@@ -61,7 +61,7 @@ export default function Importar() {
   return (
     <>
       <Cabecalho
-        rotulo="IMPORTAÇÃO · CSV · OFX · XLSX"
+        rotulo="Importação · CSV · OFX · XLSX"
         titulo={
           <>
             traga o extrato <em>do banco</em>
@@ -71,7 +71,7 @@ export default function Importar() {
       />
 
       <div className="grade-import">
-        <Cartao titulo="ARQUIVO" indice={0}>
+        <Cartao titulo="Arquivo" indice={0}>
           <div
             className={`solta ${arrastando ? 'arrastando' : ''} ${arquivo ? 'com-arquivo' : ''}`}
             onDragOver={(e) => {
@@ -111,7 +111,7 @@ export default function Importar() {
 
           <div className="campos">
             <label className="campo">
-              <span>CONTA</span>
+              <span>Conta</span>
               <input
                 value={conta}
                 onChange={(e) => setConta(e.target.value)}
@@ -120,7 +120,7 @@ export default function Importar() {
             </label>
 
             <label className="campo">
-              <span>PESSOA</span>
+              <span>Pessoa</span>
               <input
                 value={pessoa}
                 onChange={(e) => setPessoa(e.target.value)}
@@ -129,7 +129,7 @@ export default function Importar() {
             </label>
 
             <label className="campo">
-              <span>TIPO</span>
+              <span>Tipo</span>
               <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
                 <option value="auto">detectar sozinho</option>
                 <option value="conta">extrato de conta</option>
@@ -139,7 +139,7 @@ export default function Importar() {
 
             {/* fatura: as compras contam no mes em que a fatura e paga, nao no dia da compra */}
             <label className="campo">
-              <span>MÊS DA FATURA</span>
+              <span>Mês da fatura</span>
               <input
                 type="month"
                 value={mesFatura}
@@ -174,14 +174,14 @@ export default function Importar() {
           </div>
         </Cartao>
 
-        <Cartao titulo="COMO EXPORTAR" indice={1}>
+        <Cartao titulo="Como exportar" indice={1}>
           <GuiaBancos banco={guia} aoEscolher={setGuia} />
         </Cartao>
       </div>
 
       {resultado && <Resultado res={resultado} fase={fase} aoFechar={recomecar} />}
 
-      <Cartao titulo="IMPORTAÇÕES ANTERIORES" indice={2}>
+      <Cartao titulo="Importações anteriores" indice={2}>
         {historico.fase === 'carregando' && <Carregando linhas={3} />}
         {historico.fase === 'erro' && <p className="dica">{historico.mensagem}</p>}
         {historico.fase === 'ok' &&
@@ -238,7 +238,7 @@ function Resultado({
   return (
     <Cartao
       className="resultado"
-      titulo={previa ? 'CONFERÊNCIA — NADA FOI GRAVADO' : 'IMPORTAÇÃO CONCLUÍDA'}
+      titulo={previa ? 'Conferência — nada foi gravado' : 'Importação concluída'}
       indice={0}
       extra={
         <button className="botao pequeno" onClick={aoFechar}>
@@ -249,32 +249,32 @@ function Resultado({
         <>
           {res.layout && <Pill tom="ok">{res.layout.toUpperCase()}</Pill>}
           <Pill>{res.formato.toUpperCase()}</Pill>
-          <Pill>TIPO: {res.tipo.toUpperCase()}</Pill>
-          {res.conta && <Pill>CONTA: {res.conta.toUpperCase()}</Pill>}
-          {res.tipo === 'cartao' && res.mes_fatura && <Pill tom="ok">FATURA: {rotuloMes(`${res.mes_fatura}-01`).toUpperCase()}</Pill>}
-          <Pill>{res.total_linhas} LINHAS</Pill>
+          <Pill>tipo: {res.tipo}</Pill>
+          {res.conta && <Pill>conta: {res.conta}</Pill>}
+          {res.tipo === 'cartao' && res.mes_fatura && <Pill tom="ok">fatura: {rotuloMes(`${res.mes_fatura}-01`)}</Pill>}
+          <Pill>{res.total_linhas} linhas</Pill>
           {res.categorizadas > 0 && (
-            <Pill tom="ok">{res.categorizadas} CATEGORIZADAS</Pill>
+            <Pill tom="ok">{res.categorizadas} categorizadas</Pill>
           )}
-          {res.com_erro > 0 && <Pill tom="alerta">{res.com_erro} COM ERRO</Pill>}
+          {res.com_erro > 0 && <Pill tom="alerta">{res.com_erro} com erro</Pill>}
         </>
       }
     >
       <div className="placar">
         <Placar
-          rotulo={previa ? 'VÁLIDAS' : 'IMPORTADAS'}
+          rotulo={previa ? 'Válidas' : 'Importadas'}
           valor={previa ? (res.validas ?? 0) : (res.importadas ?? 0)}
           tom="verde"
         />
         {!previa && (
-          <Placar rotulo="JÁ EXISTIAM" valor={res.duplicadas ?? 0} tom="fraco" />
+          <Placar rotulo="Já existiam" valor={res.duplicadas ?? 0} tom="fraco" />
         )}
-        <Placar rotulo="COM ERRO" valor={res.com_erro} tom={res.com_erro ? 'vermelho' : 'fraco'} />
+        <Placar rotulo="Com erro" valor={res.com_erro} tom={res.com_erro ? 'vermelho' : 'fraco'} />
       </div>
 
       {res.erros.length > 0 && (
         <div className="erros">
-          <span className="rotulo fraco">LINHAS RECUSADAS</span>
+          <span className="rotulo fraco">Linhas recusadas</span>
           <ul>
             {res.erros.map((e, i) => (
               <li key={i} style={{ '--i': i } as React.CSSProperties}>

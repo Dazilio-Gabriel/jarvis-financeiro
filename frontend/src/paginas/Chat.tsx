@@ -64,7 +64,7 @@ export default function Chat() {
   return (
     <>
       <Cabecalho
-        rotulo="ASSISTENTE · LLM + TOOL CALLING"
+        rotulo="Assistente · LLM + tool calling"
         titulo={
           <>
             pergunte ao <em>Jarvis</em>
