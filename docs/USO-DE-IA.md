@@ -360,3 +360,25 @@ Copie o bloco abaixo, preencha e adicione ao fim deste arquivo:
     curta, link usado duas vezes, sessão antiga derrubada, senha antiga recusada), limite de envios,
     cliente da Brevo contra servidor falso, HTML do e-mail escapado e integração no MySQL 8.4.
 - **Revisão humana:** _(preencher)_
+
+### 2026-11-10 — Cores das categorias na paleta nova e ícone da carteira
+- **Quem:** Gabriel Dazilio Fanchiotti · **Ferramenta:** Claude Code (Claude Opus 5.5)
+- **Prompt (literal):**
+  > consegue editar as cores do dashboard da parte de categoria, acredito que nao foram enquadradas
+  > com base na nova pelta e mude o icone tbm, faça um que faça mais sentido
+- **Resultado:**
+  - **Paleta de categorias:** a mesma família de tons do painel JuditeVendas, com o laranja exato da
+    marca em Alimentação (antes era um laranja quase igual, que parecia erro) e sem vermelho nas
+    padrão (vermelho é "estourou o orçamento"; Saúde virou azul-petróleo). Outros, Entrada e "sem
+    categoria" viraram cinzas quentes do tema novo (antes puxavam para o verde do tema antigo).
+    Validada com o script de paleta do guia de visualização: separação para daltonismo e distância
+    entre vizinhas passam nos dois temas; três tons do tema claro ficam abaixo de 3:1 de contraste,
+    compensado pelos nomes ao lado de cada cor.
+  - **Um tom por tema:** o banco grava o hex do tema claro (migration 009 troca as cores antigas num
+    UPDATE só) e a tela troca pela variável CSS do slot (`--cat-1`…`--cat-12`), que tem tom próprio
+    no tema escuro.
+  - **Barras do Dashboard:** categoria sem orçamento aparecia com a barra cheia (parecia estourada);
+    agora mede contra o maior gasto do mês. Com orçamento, continua o % da meta.
+  - **Ícone:** carteira com a faísca do assistente (finanças + IA), escolhida entre quatro opções
+    desenhadas e comparadas de 16 a 96 px.
+- **Revisão humana:** _(preencher)_

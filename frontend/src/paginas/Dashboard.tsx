@@ -36,6 +36,7 @@ export default function Dashboard() {
   const estouradas = r.por_categoria.filter(
     (c) => c.orcamento_centavos && c.total_centavos > c.orcamento_centavos,
   ).length
+  const maiorGasto = Math.max(1, ...r.por_categoria.map((c) => c.total_centavos))
 
   const semDados = r.transacoes === 0
 
@@ -116,6 +117,8 @@ export default function Dashboard() {
                     ? Math.round((c.total_centavos / c.orcamento_centavos) * 100)
                     : null
                   const estourou = pct !== null && pct > 100
+                  // sem meta, a barra cheia parecia "orcamento estourado": mede contra o maior gasto do mes
+                  const largura = pct ?? (c.total_centavos / maiorGasto) * 100
 
                   return (
                     <NavLink
@@ -144,7 +147,7 @@ export default function Dashboard() {
                           className={estourou ? 'barra-fill estourou' : 'barra-fill'}
                           style={
                             {
-                              '--largura': `${Math.min(pct ?? 100, 100)}%`,
+                              '--largura': `${Math.min(largura, 100)}%`,
                               '--i': i,
                               background: estourou ? undefined : c.cor,
                             } as React.CSSProperties

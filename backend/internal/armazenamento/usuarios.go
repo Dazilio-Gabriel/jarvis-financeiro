@@ -30,10 +30,10 @@ var (
 	ErrLinkInvalido    = errors.New("link de nova senha invalido, usado ou vencido")
 	codigoDuplicadoSQL = uint16(1062)
 	alfabetoConvite    = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sem 0/O/1/I: codigo e lido em voz alta
-	categoriasIniciais = []struct{ nome, cor string }{      // mesmas cores da migration 005
-		{"Mercado", "#3987e5"}, {"Alimentação", "#d95926"}, {"Transporte", "#199e70"},
-		{"Moradia", "#c98500"}, {"Lazer", "#d55181"}, {"Educação", "#008300"},
-		{"Assinaturas", "#9085e9"}, {"Saúde", "#e66767"}, {"Outros", "#8b9490"}, {"Entrada", "#7fa59a"},
+	categoriasIniciais = []struct{ nome, cor string }{      // mesmas cores da migration 009
+		{"Mercado", "#2a78d6"}, {"Alimentação", "#e2552d"}, {"Transporte", "#1baf7a"},
+		{"Moradia", "#eda100"}, {"Lazer", "#e87ba4"}, {"Educação", "#008300"},
+		{"Assinaturas", "#6250d6"}, {"Saúde", "#0f9bb0"}, {"Outros", "#a1978f"}, {"Entrada", "#7d8b98"},
 	}
 )
 

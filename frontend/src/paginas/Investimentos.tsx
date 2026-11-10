@@ -16,7 +16,7 @@ import Rosca from '../componentes/Rosca'
 import { fmtBRL, fmtMoeda, lerValor, NOMES_MES, useBusca } from '../util'
 
 // mesma paleta validada das categorias: cada conta tem um tom proprio, na ordem fixa
-const PALETA = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767', '#0f9bb0', '#b36b3a', '#c05ab0', '#6d8f1c']
+const PALETA = Array.from({ length: 12 }, (_, i) => `var(--cat-${i + 1})`)
 
 const TIPOS: Record<Ativo['tipo'], string> = {
   caixinha: 'caixinha',

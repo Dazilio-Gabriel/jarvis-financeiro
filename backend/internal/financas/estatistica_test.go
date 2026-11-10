@@ -93,15 +93,15 @@ func TestHashNDiferenciaCompraRepetida(t *testing.T) {
 }
 
 func TestProximaCor(t *testing.T) {
-	laCate := []Categoria{{Cor: "#3987e5"}, {Cor: "#0F9BB0"}}
-	if lcCor := ProximaCor(laCate); lcCor != "#b36b3a" {
+	laCate := []Categoria{{Cor: "#2a78d6"}, {Cor: "#B36B3A"}}
+	if lcCor := ProximaCor(laCate); lcCor != "#c05ab0" {
 		t.Errorf("ProximaCor = %s; esperado a 2a extra (a 1a ja esta em uso)", lcCor)
 	}
 	laTodas := []Categoria{}
 	for _, lcCor := range PaletaCategorias {
 		laTodas = append(laTodas, Categoria{Cor: lcCor})
 	}
-	if lcCor := ProximaCor(laTodas); lcCor != "#8b9490" {
+	if lcCor := ProximaCor(laTodas); lcCor != CorNeutra {
 		t.Errorf("paleta esgotada deveria dar neutro, deu %s", lcCor)
 	}
 }

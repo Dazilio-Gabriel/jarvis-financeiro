@@ -39,6 +39,23 @@
   --info-bg: #e8f0fb;
   --info-tx: #1c5cab;
 
+  /* categorias: o hex gravado no banco e o deste tema; api.ts troca pela variavel do slot */
+  --cat-1: #2a78d6;
+  --cat-2: #e2552d;
+  --cat-3: #1baf7a;
+  --cat-4: #eda100;
+  --cat-5: #e87ba4;
+  --cat-6: #008300;
+  --cat-7: #6250d6;
+  --cat-8: #0f9bb0;
+  --cat-9: #b36b3a;
+  --cat-10: #c05ab0;
+  --cat-11: #6d8f1c;
+  --cat-12: #e34948;
+  --cat-outros: #a1978f;
+  --cat-entrada: #7d8b98;
+  --cat-sem: #c9c1b9;
+
   --shadow: 0 1px 2px rgba(36, 32, 29, 0.05), 0 10px 28px rgba(36, 32, 29, 0.06);
   --shadow-lg: 0 24px 60px rgba(20, 14, 10, 0.22);
   --r-card: 14px;
@@ -78,6 +95,16 @@
     --bad: #e5534b;
     --info-bg: rgba(57, 135, 229, 0.18);
     --info-tx: #8dbbf2;
+    --cat-1: #3987e5;
+    --cat-2: #d95926;
+    --cat-3: #199e70;
+    --cat-4: #c98500;
+    --cat-5: #d55181;
+    --cat-7: #9085e9;
+    --cat-12: #e66767;
+    --cat-outros: #857c76;
+    --cat-entrada: #76838f;
+    --cat-sem: #5f5752;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.28);
   }
 }
@@ -112,6 +139,16 @@
   --bad: #e5534b;
   --info-bg: rgba(57, 135, 229, 0.18);
   --info-tx: #8dbbf2;
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
+  --cat-5: #d55181;
+  --cat-7: #9085e9;
+  --cat-12: #e66767;
+  --cat-outros: #857c76;
+  --cat-entrada: #76838f;
+  --cat-sem: #5f5752;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 

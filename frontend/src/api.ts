@@ -139,19 +139,52 @@ async function pedir<T>(caminho: string, init?: RequestInit): Promise<T> {
 
 export const buscarSaude = (sinal?: AbortSignal) => pedir<Saude>('/api/saude', { signal: sinal })
 
+// A cor de categoria chega como o hex da paleta no tema claro (o que o banco grava) e vira a
+// variavel CSS do slot, que tem tom proprio no tema escuro. Cor fora da paleta passa como veio.
+const SLOT_DA_COR: Record<string, string> = {
+  '#2a78d6': 'var(--cat-1)',
+  '#e2552d': 'var(--cat-2)',
+  '#1baf7a': 'var(--cat-3)',
+  '#eda100': 'var(--cat-4)',
+  '#e87ba4': 'var(--cat-5)',
+  '#008300': 'var(--cat-6)',
+  '#6250d6': 'var(--cat-7)',
+  '#0f9bb0': 'var(--cat-8)',
+  '#b36b3a': 'var(--cat-9)',
+  '#c05ab0': 'var(--cat-10)',
+  '#6d8f1c': 'var(--cat-11)',
+  '#e34948': 'var(--cat-12)',
+  '#a1978f': 'var(--cat-outros)',
+  '#7d8b98': 'var(--cat-entrada)',
+  '#c9c1b9': 'var(--cat-sem)',
+}
+
+export const corDoTema = (hex: string) => SLOT_DA_COR[hex.toLowerCase()] ?? hex
+
+/** Troca todo campo "cor" da resposta (em qualquer nivel) pela variavel do tema. */
+function comCoresDoTema<T>(valor: T): T {
+  if (Array.isArray(valor)) return valor.map(comCoresDoTema) as T
+  if (valor && typeof valor === 'object') {
+    return Object.fromEntries(
+      Object.entries(valor).map(([k, v]) => [k, k === 'cor' && typeof v === 'string' ? corDoTema(v) : comCoresDoTema(v)]),
+    ) as T
+  }
+  return valor
+}
+
 export const buscarResumo = (sinal?: AbortSignal, de?: string, ate?: string) => {
   const q = new URLSearchParams()
   if (de) q.set('de', de)
   if (ate) q.set('ate', ate)
   const sufixo = q.toString() ? `?${q}` : ''
-  return pedir<Resumo>(`/api/resumo${sufixo}`, { signal: sinal })
+  return pedir<Resumo>(`/api/resumo${sufixo}`, { signal: sinal }).then(comCoresDoTema)
 }
 
 export const buscarEvolucao = (sinal?: AbortSignal, meses = 6) =>
   pedir<{ meses: Mes[] }>(`/api/evolucao?meses=${meses}`, { signal: sinal })
 
 export const buscarCategorias = (sinal?: AbortSignal) =>
-  pedir<{ categorias: Categoria[] }>('/api/categorias', { signal: sinal })
+  pedir<{ categorias: Categoria[] }>('/api/categorias', { signal: sinal }).then(comCoresDoTema)
 
 export type FiltroTransacoes = {
   de?: string
@@ -269,7 +302,7 @@ export type Estatisticas = {
 }
 
 export const buscarEstatisticas = (mes: string, sinal?: AbortSignal) =>
-  pedir<Estatisticas>(`/api/estatisticas?mes=${mes}`, { signal: sinal })
+  pedir<Estatisticas>(`/api/estatisticas?mes=${mes}`, { signal: sinal }).then(comCoresDoTema)
 
 export type Usuario = {
   id: number
@@ -363,13 +396,13 @@ export type ResultadoCategorizacao = {
 export const categorizarComIA = () => postarJSON<ResultadoCategorizacao>('/api/categorizar/ia', {})
 
 export const buscarPendencias = (sinal?: AbortSignal) =>
-  pedir<{ pendencias: Pendencia[] }>('/api/categorizar/pendentes', { signal: sinal })
+  pedir<{ pendencias: Pendencia[] }>('/api/categorizar/pendentes', { signal: sinal }).then(comCoresDoTema)
 
 export const responderPendencia = (estabelecimento: string, categoria_id: number) =>
   postarJSON<{ categorizadas: number }>('/api/categorizar/estabelecimento', { estabelecimento, categoria_id })
 
 export const criarCategoria = (nome: string, cor: string) =>
-  postarJSON<{ id: number; nome: string; cor: string }>('/api/categorias', { nome, cor })
+  postarJSON<{ id: number; nome: string; cor: string }>('/api/categorias', { nome, cor }).then(comCoresDoTema)
 
 export const apagarRegra = (id: number) =>
   pedir<{ ok: boolean }>(`/api/regras/${id}`, { method: 'DELETE' })

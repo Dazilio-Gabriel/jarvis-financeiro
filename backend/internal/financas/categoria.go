@@ -35,15 +35,22 @@ func (r RegraCategoria) Casa(pcDesc string) bool {
 	return strings.Contains(util.NormText(pcDesc), lcPadr)
 }
 
-// PaletaCategorias e a ordem fixa de cores de categoria (validada para daltonismo e contraste no
-// fundo escuro). As 8 primeiras sao das categorias padrao; as 4 ultimas, das que o usuario cria.
+// PaletaCategorias e a ordem fixa de cores de categoria: a familia de tons do painel JuditeVendas,
+// com o laranja exato da marca e sem vermelho nas padrao (vermelho e "estourou o orcamento").
+// Ordem validada para daltonismo nos dois temas. O hex gravado e o do tema claro; a tela troca
+// pelo tom do tema escuro. As 8 primeiras sao das categorias padrao; as 4 ultimas, das que o
+// usuario cria.
 var PaletaCategorias = []string{
-	"#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767",
-	"#0f9bb0", "#b36b3a", "#c05ab0", "#6d8f1c",
+	"#2a78d6", "#e2552d", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#0f9bb0",
+	"#b36b3a", "#c05ab0", "#6d8f1c", "#e34948",
 }
 
-// CorSemCategoria e neutra: gasto sem categoria nao pode parecer uma categoria
-const CorSemCategoria = "#5b6660"
+const (
+	// CorSemCategoria e neutra e clara: gasto sem categoria nao pode parecer uma categoria
+	CorSemCategoria = "#c9c1b9"
+	// CorNeutra e a de "Outros" e a de quando a paleta acaba (melhor repetir cinza que um tom)
+	CorNeutra = "#a1978f"
+)
 
 // ProximaCor escolhe para uma categoria nova a primeira cor da paleta que a familia ainda nao
 // usa, comecando pelas extras. Esgotou: neutro (melhor repetir cinza do que um tom ja usado).
@@ -58,5 +65,5 @@ func ProximaCor(paCate []Categoria) string {
 			return lcCor
 		}
 	}
-	return "#8b9490"
+	return CorNeutra
 }
